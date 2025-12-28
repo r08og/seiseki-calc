@@ -1,0 +1,15 @@
+/* アプリケーション全体のスタイル */
+.App {
+  min-height: 100vh;
+}
+
+/* リセットスタイル */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}

@@ -1,0 +1,23 @@
+{
+  "name": "評定計算機 v2.0 - seiseki",
+  "short_name": "評定計算機v2",
+  "description": "日本の学校制度における評定計算システム",
+  "start_url": "/?v=2",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg", 
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
