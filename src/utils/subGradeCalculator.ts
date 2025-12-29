@@ -1,12 +1,18 @@
 import type { GradingCriteria, TestScore } from '../types/grading';
+import { getGradingCriteria } from './gradeCalculator';
 
-// 技能評価用の評定基準（5段階評価）
+// 技能評価用のデフォルト評定基準（普通コース）
 export const SUB_GRADING_CRITERIA: GradingCriteria = {
   grade5: { min: 85, max: 100 },
   grade4: { min: 70, max: 84 },
   grade3: { min: 55, max: 69 },
   grade2: { min: 40, max: 54 },
   grade1: { min: 0, max: 39 },
+};
+
+// コースタイプに応じた評定基準を取得
+export const getSubGradingCriteria = (courseType: 'advanced' | 'regular' = 'regular'): GradingCriteria => {
+  return getGradingCriteria(courseType);
 };
 
 // シンプルな平均計算（テスト80% + 平常点20%）
@@ -35,11 +41,12 @@ export const calculateWeightedAverage = (
   return average;
 };
 
-// 加重平均から評定を計算する関数（技能評価基準）
+// 加重平均から評定を計算する関数（コースタイプ対応）
 export const calculateGradeFromAverage = (
   average: number,
-  criteria: GradingCriteria = SUB_GRADING_CRITERIA
+  courseType: 'advanced' | 'regular' = 'regular'
 ): number => {
+  const criteria = getSubGradingCriteria(courseType);
   if (average >= criteria.grade5.min) return 5;
   if (average >= criteria.grade4.min) return 4;
   if (average >= criteria.grade3.min) return 3;
@@ -47,11 +54,12 @@ export const calculateGradeFromAverage = (
   return 1;
 };
 
-// 目標評定に必要な加重平均を計算する関数（技能評価基準）
+// 目標評定に必要な加重平均を計算する関数（コースタイプ対応）
 export const getRequiredAverageForGrade = (
   targetGrade: number,
-  criteria: GradingCriteria = SUB_GRADING_CRITERIA
+  courseType: 'advanced' | 'regular' = 'regular'
 ): number => {
+  const criteria = getSubGradingCriteria(courseType);
   switch (targetGrade) {
     case 5: return criteria.grade5.min;
     case 4: return criteria.grade4.min;
@@ -62,16 +70,17 @@ export const getRequiredAverageForGrade = (
   }
 };
 
-// 次のテストで必要な点数を計算（技能評価基準）
+// 次のテストで必要な点数を計算（コースタイプ対応）
 export const calculateRequiredScoreForNextTest = (
   currentTests: TestScore[],
   defaultParticipationScore: number,
   targetGrade: number,
   nextTestMaxScore: number = 100,
-  nextTestParticipationScore?: number
+  nextTestParticipationScore?: number,
+  courseType: 'advanced' | 'regular' = 'regular'
 ): number => {
   // 目標評定に必要な総合点数
-  const targetAverage = getRequiredAverageForGrade(targetGrade);
+  const targetAverage = getRequiredAverageForGrade(targetGrade, courseType);
   
   // 次のテストで使用する平常点
   const nextParticipation = nextTestParticipationScore ?? defaultParticipationScore;
@@ -113,16 +122,17 @@ export const calculateRequiredScoreForNextTest = (
   return Math.max(0, requiredScore);
 };
 
-// 現在の評定をキープするために次のテストで必要な最低点数を計算（技能評価基準）
+// 現在の評定をキープするために次のテストで必要な最低点数を計算（コースタイプ対応）
 export const calculateRequiredScoreToKeepGrade = (
   currentTests: TestScore[],
   defaultParticipationScore: number,
   currentGrade: number,
   nextTestMaxScore: number = 100,
-  nextTestParticipationScore?: number
+  nextTestParticipationScore?: number,
+  courseType: 'advanced' | 'regular' = 'regular'
 ): number => {
   // 現在の評定をキープするために必要な最低平均点
-  const minAverageToKeep = getRequiredAverageForGrade(currentGrade);
+  const minAverageToKeep = getRequiredAverageForGrade(currentGrade, courseType);
   
   // 次のテストで使用する平常点
   const nextParticipation = nextTestParticipationScore ?? defaultParticipationScore;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, UserSession } from '../types/user';
-import { createUser, getAllUsers } from '../utils/userManager';
+import { createUser, getAllUsers, deleteUser } from '../utils/userManager';
 
 interface UserManagerProps {
   onUserSelected: (user: UserSession) => void;
@@ -9,6 +9,7 @@ interface UserManagerProps {
 const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [newUserName, setNewUserName] = useState('');
+  const [newUserCourse, setNewUserCourse] = useState<'advanced' | 'regular'>('regular');
   const [showNewUserForm, setShowNewUserForm] = useState(false);
 
   useEffect(() => {
@@ -21,9 +22,10 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
       return;
     }
     
-    const user = createUser(newUserName.trim());
+    const user = createUser(newUserName.trim(), newUserCourse);
     setUsers(getAllUsers());
     setNewUserName('');
+    setNewUserCourse('regular');
     setShowNewUserForm(false);
     onUserSelected(user);
   };
@@ -31,9 +33,22 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
   const handleSelectUser = (user: User) => {
     const userSession: UserSession = {
       userId: user.id,
-      userName: user.name
+      userName: user.name,
+      courseType: user.courseType || 'regular'
     };
     onUserSelected(userSession);
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    if (window.confirm(`${userName}さんのデータを完全に削除しますか？\n※この操作は取り消せません`)) {
+      const success = deleteUser(userId);
+      if (success) {
+        setUsers(getAllUsers());
+        alert(`${userName}さんのデータを削除しました`);
+      } else {
+        alert('削除に失敗しました');
+      }
+    }
   };
 
   return (
@@ -75,37 +90,72 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
             </h3>
             <div style={{ display: 'grid', gap: '10px' }}>
               {users.map(user => (
-                <button
+                <div
                   key={user.id}
-                  onClick={() => handleSelectUser(user)}
                   style={{
                     padding: '15px 20px',
                     backgroundColor: '#f8f9fa',
                     border: '2px solid #e9ecef',
                     borderRadius: '12px',
-                    cursor: 'pointer',
                     fontSize: '16px',
                     fontWeight: '500',
                     color: '#333',
-                    transition: 'all 0.2s',
-                    textAlign: 'left'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e9ecef';
-                    e.currentTarget.style.borderColor = '#667eea';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8f9fa';
-                    e.currentTarget.style.borderColor = '#e9ecef';
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}
                 >
-                  <div style={{ fontSize: '18px', marginBottom: '5px' }}>
-                    {user.name}
+                  <div 
+                    onClick={() => handleSelectUser(user)}
+                    style={{
+                      flex: 1,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.parentElement!.style.backgroundColor = '#e9ecef';
+                      e.currentTarget.parentElement!.style.borderColor = '#667eea';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.parentElement!.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.parentElement!.style.borderColor = '#e9ecef';
+                    }}
+                  >
+                    <div style={{ fontSize: '18px', marginBottom: '5px' }}>
+                      {user.name} {user.courseType === 'advanced' ? '🎓' : '📚'}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>
+                      {user.courseType === 'advanced' ? '進学コース' : '普通コース'} / 作成日: {user.createdAt.toLocaleDateString('ja-JP')}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '14px', color: '#666' }}>
-                    作成日: {user.createdAt.toLocaleDateString('ja-JP')}
-                  </div>
-                </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteUser(user.id, user.name);
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      marginLeft: '15px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#c82333';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dc3545';
+                    }}
+                  >
+                    🗑️ 削除
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -181,6 +231,53 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
                   autoFocus
                 />
               </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  marginBottom: '10px', 
+                  color: '#333' 
+                }}>
+                  🎓 コース選択
+                </label>
+                <select
+                  value={newUserCourse}
+                  onChange={(e) => setNewUserCourse(e.target.value as 'advanced' | 'regular')}
+                  style={{
+                    width: '100%',
+                    padding: '15px',
+                    border: '2px solid #000',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    backgroundColor: '#fff',
+                    color: '#000',
+                    fontWeight: '600',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 12px center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '16px'
+                  }}
+                >
+                  <option value="regular">📚 普通コース</option>
+                  <option value="advanced">🎓 進学コース</option>
+                </select>
+                <div style={{ 
+                  marginTop: '8px', 
+                  fontSize: '14px', 
+                  color: '#000',
+                  textAlign: 'center',
+                  fontWeight: '600'
+                }}>
+                  {newUserCourse === 'advanced' 
+                    ? '🎓 進学コース: 評定5は80点以上で取得可能' 
+                    : '📚 普通コース: 評定5は85点以上必要'
+                  }
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleCreateUser}
@@ -240,12 +337,14 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
           <div style={{ 
             marginTop: '20px', 
             padding: '15px', 
-            backgroundColor: '#f8f9fa', 
+            backgroundColor: '#fff3cd', 
             borderRadius: '10px',
             fontSize: '14px',
-            color: '#666',
-            textAlign: 'center'
+            color: '#856404',
+            textAlign: 'center',
+            border: '1px solid #ffeaa7'
           }}>
+            ⚠️ ユーザーを削除すると、そのユーザーの全ての成績データも完全に削除されます<br/>
             💡 各ユーザーの成績データは個別に保存されます
           </div>
         )}

@@ -12,6 +12,10 @@ const SubGradeCalculator: React.FC = () => {
   const [subjects, setSubjects] = useState<SubjectGrades[]>([]);
   const [currentSubjectId, setCurrentSubjectId] = useState<string>('');
   
+  // ユーザーのコースタイプを取得
+  const currentUser = getCurrentUser();
+  const userCourseType = currentUser?.courseType || 'regular';
+  
   // シンプルな入力フォーム
   const [formData, setFormData] = useState({
     subjectName: '',
@@ -402,10 +406,10 @@ const SubGradeCalculator: React.FC = () => {
                   outline: 'none'
                 }}
               >
-                <option value={5}>5 (80点以上)</option>
-                <option value={4}>4 (65-79点)</option>
-                <option value={3}>3 (50-64点)</option>
-                <option value={2}>2 (40-49点)</option>
+                <option value={5}>5 ({userCourseType === 'advanced' ? '80点以上' : '85点以上'})</option>
+                <option value={4}>4 ({userCourseType === 'advanced' ? '65-79点' : '70-84点'})</option>
+                <option value={3}>3 ({userCourseType === 'advanced' ? '50-64点' : '55-69点'})</option>
+                <option value={2}>2 ({userCourseType === 'advanced' ? '40-49点' : '40-54点'})</option>
                 <option value={1}>1 (39点以下)</option>
               </select>
             </div>
@@ -565,9 +569,7 @@ const SubGradeCalculator: React.FC = () => {
               <div style={{ fontSize: '1.1rem', color: results.isAchieved ? '#2e7d32' : '#bf360c' }}>
                 {results.isAchieved 
                   ? `素晴らしい！評定${formData.targetGrade}を達成しています！` 
-                  : results.nextTestScore > 100
-                    ? '何点取っても達成できません。'
-                    : `次のテストで約${results.nextTestScore}点以上取れば目標達成です！`
+                  : `次のテストで約${results.nextTestScore}点以上取れば目標達成です！`
                 }
               </div>
             </div>

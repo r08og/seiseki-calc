@@ -2,6 +2,7 @@
 export interface User {
   id: string;
   name: string;
+  courseType: 'advanced' | 'regular';
   createdAt: Date;
 }
 
@@ -9,4 +10,5 @@ export interface User {
 export interface UserSession {
   userId: string;
   userName: string;
+  courseType: 'advanced' | 'regular';
 }
