@@ -273,8 +273,8 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
                   fontWeight: '600'
                 }}>
                   {newUserCourse === 'advanced' 
-                    ? '🎓 進学コース: 評定5は80点以上で取得可能' 
-                    : '📚 普通コース: 評定5は85点以上必要'
+                    ? '🎓 進学コース: 主要教科80点以上、技能評価85点以上で評定5' 
+                    : '📚 普通コース: 主要教科85点以上、技能評価85点以上で評定5'
                   }
                 </div>
               </div>

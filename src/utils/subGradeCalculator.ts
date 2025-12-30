@@ -1,8 +1,7 @@
 import type { GradingCriteria, TestScore } from '../types/grading';
-import { getGradingCriteria } from './gradeCalculator';
 
-// 技能評価用のデフォルト評定基準（普通コース）
-export const SUB_GRADING_CRITERIA: GradingCriteria = {
+// 技能評価用の進学コース評定基準（厳しい基準）
+export const SUB_ADVANCED_GRADING: GradingCriteria = {
   grade5: { min: 85, max: 100 },
   grade4: { min: 70, max: 84 },
   grade3: { min: 55, max: 69 },
@@ -10,9 +9,21 @@ export const SUB_GRADING_CRITERIA: GradingCriteria = {
   grade1: { min: 0, max: 39 },
 };
 
-// コースタイプに応じた評定基準を取得
+// 技能評価用の普通コース評定基準（厳しい基準）
+export const SUB_REGULAR_GRADING: GradingCriteria = {
+  grade5: { min: 85, max: 100 },
+  grade4: { min: 70, max: 84 },
+  grade3: { min: 55, max: 69 },
+  grade2: { min: 40, max: 54 },
+  grade1: { min: 0, max: 39 },
+};
+
+// 技能評価用のデフォルト評定基準（普通コース）
+export const SUB_GRADING_CRITERIA: GradingCriteria = SUB_REGULAR_GRADING;
+
+// 技能評価用のコースタイプに応じた評定基準を取得（主要教科とは逆）
 export const getSubGradingCriteria = (courseType: 'advanced' | 'regular' = 'regular'): GradingCriteria => {
-  return getGradingCriteria(courseType);
+  return courseType === 'advanced' ? SUB_ADVANCED_GRADING : SUB_REGULAR_GRADING;
 };
 
 // シンプルな平均計算（テスト80% + 平常点20%）

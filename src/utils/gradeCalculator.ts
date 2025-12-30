@@ -1,6 +1,6 @@
 import type { GradingCriteria, TestScore } from '../types/grading';
 
-// 進学コースの評定基準（5段階評価）
+// 進学コースの評定基準（5段階評価） - より優しい基準
 export const ADVANCED_COURSE_GRADING: GradingCriteria = {
   grade5: { min: 80, max: 100 },
   grade4: { min: 65, max: 79 },
@@ -9,7 +9,7 @@ export const ADVANCED_COURSE_GRADING: GradingCriteria = {
   grade1: { min: 0, max: 39 },
 };
 
-// 普通コースの評定基準（5段階評価）
+// 普通コースの評定基準（5段階評価） - より厳しい基準
 export const REGULAR_COURSE_GRADING: GradingCriteria = {
   grade5: { min: 85, max: 100 },
   grade4: { min: 70, max: 84 },
