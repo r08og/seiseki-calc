@@ -87,7 +87,7 @@ const SubGradeCalculator: React.FC = () => {
             🎯 評定計算機
           </h1>
           <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-            シンプル・簡単・すぐ分かる
+            技能教科用・85点で評定5
           </p>
         </div>
 
