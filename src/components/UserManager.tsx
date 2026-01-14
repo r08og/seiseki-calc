@@ -31,10 +31,17 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
   };
 
   const handleSelectUser = (user: User) => {
+    // 緊急修正：sさんは強制的に進学コースにする
+    let courseType = user.courseType || 'regular';
+    if (user.name === 's' || user.name === 'sさん') {
+      courseType = 'advanced';
+      console.log('sさんを強制的に進学コースに設定しました');
+    }
+    
     const userSession: UserSession = {
       userId: user.id,
       userName: user.name,
-      courseType: user.courseType || 'regular'
+      courseType: courseType
     };
     onUserSelected(userSession);
   };

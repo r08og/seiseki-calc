@@ -2,10 +2,10 @@ import type { GradingCriteria, TestScore } from '../types/grading';
 
 // 技能評価用の進学コース評定基準（厳しい基準）
 export const SUB_ADVANCED_GRADING: GradingCriteria = {
-  grade5: { min: 85, max: 100 },
-  grade4: { min: 70, max: 84 },
-  grade3: { min: 55, max: 69 },
-  grade2: { min: 40, max: 54 },
+  grade5: { min: 80, max: 100 },
+  grade4: { min: 65, max: 79 },
+  grade3: { min: 50, max: 64 },
+  grade2: { min: 40, max: 49 },
   grade1: { min: 0, max: 39 },
 };
 

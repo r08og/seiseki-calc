@@ -183,9 +183,13 @@ const SubGradeCalculator: React.FC = () => {
   // 計算結果取得
   const getResults = (subject: SubjectGrades) => {
     try {
+      // 現在のユーザーのコースタイプを取得
+      const currentUser = getCurrentUser();
+      const courseType = currentUser?.courseType === 'advanced' ? 'advanced' : 'regular';
+      
       const avg = calculateWeightedAverage(subject.currentTests, [], subject.participationScore);
-      const grade = calculateGradeFromAverage(avg);
-      const targetAvg = getRequiredAverageForGrade(subject.targetGrade);
+      const grade = calculateGradeFromAverage(avg, courseType); // ユーザーのコースタイプを使用
+      const targetAvg = getRequiredAverageForGrade(subject.targetGrade, courseType); // ユーザーのコースタイプを使用
       const needed = Math.max(0, targetAvg - avg);
       
       // 次のテストで必要な点数を正しく計算
@@ -193,7 +197,9 @@ const SubGradeCalculator: React.FC = () => {
         subject.currentTests,
         subject.participationScore,
         subject.targetGrade,
-        100 // 100点満点と仮定
+        100, // 100点満点と仮定
+        subject.participationScore, // 次のテストでも同じ平常点を想定
+        courseType // ユーザーのコースタイプを使用
       );
       
       // 現在の評定をキープするために必要な点数を計算
@@ -201,7 +207,9 @@ const SubGradeCalculator: React.FC = () => {
         subject.currentTests,
         subject.participationScore,
         grade, // 現在の評定
-        100 // 100点満点と仮定
+        100, // 100点満点と仮定
+        subject.participationScore, // 次のテストでも同じ平常点を想定
+        courseType // ユーザーのコースタイプを使用
       );
       
       return {
@@ -533,11 +541,29 @@ const SubGradeCalculator: React.FC = () => {
                   outline: 'none'
                 }}
               >
-                <option value={5}>5 (85点以上)</option>
-                <option value={4}>4 (70-84点)</option>
-                <option value={3}>3 (55-69点)</option>
-                <option value={2}>2 (40-54点)</option>
-                <option value={1}>1 (39点以下)</option>
+                {(() => {
+                  const currentUser = getCurrentUser();
+                  const isAdvanced = currentUser?.courseType === 'advanced';
+                  return isAdvanced ? (
+                    // 進学コース
+                    <>
+                      <option value={5}>5 (80点以上)</option>
+                      <option value={4}>4 (65-79点)</option>
+                      <option value={3}>3 (50-64点)</option>
+                      <option value={2}>2 (40-49点)</option>
+                      <option value={1}>1 (39点以下)</option>
+                    </>
+                  ) : (
+                    // 普通コース
+                    <>
+                      <option value={5}>5 (85点以上)</option>
+                      <option value={4}>4 (70-84点)</option>
+                      <option value={3}>3 (55-69点)</option>
+                      <option value={2}>2 (40-54点)</option>
+                      <option value={1}>1 (39点以下)</option>
+                    </>
+                  );
+                })()}
               </select>
             </div>
             <div>
