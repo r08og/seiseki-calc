@@ -5,11 +5,12 @@ import {
   calculateGradeFromAverage, 
   getRequiredAverageForGrade,
   calculateRequiredScoreForNextTest,
-  calculateRequiredScoreToKeepGrade
-} from '../utils/subGradeCalculator';
+  calculateRequiredScoreToKeepGrade,
+  ADVANCED_COURSE_GRADING
+} from '../utils/gradeCalculator';
 import { getCurrentUser, getUserStorageKey } from '../utils/userManager';
 
-const SubGradeCalculator: React.FC = () => {
+const GradeCalculator: React.FC = () => {
   const [subjects, setSubjects] = useState<SubjectGrades[]>([]);
   const [currentSubjectId, setCurrentSubjectId] = useState<string>('');
   const [viewSemester, setViewSemester] = useState<string>(''); // 評定表示用の学期選択
@@ -251,7 +252,7 @@ const SubGradeCalculator: React.FC = () => {
         return {
           currentAverage: 0,
           currentGrade: 1,
-          targetAverage: getRequiredAverageForGrade(subject.targetGrade, 'regular'),
+          targetAverage: getRequiredAverageForGrade(subject.targetGrade, ADVANCED_COURSE_GRADING),
           pointsNeeded: 0,
           isAchieved: false,
           nextTestScore: 0,
@@ -262,8 +263,8 @@ const SubGradeCalculator: React.FC = () => {
 
       // 重み付き平均を計算（テスト80% + 平常点20%）
       const avg = calculateWeightedAverage(relevantTests, [], subject.participationScore);
-      const grade = calculateGradeFromAverage(avg, 'regular');
-      const targetAvg = getRequiredAverageForGrade(subject.targetGrade, 'regular');
+      const grade = calculateGradeFromAverage(avg, ADVANCED_COURSE_GRADING);
+      const targetAvg = getRequiredAverageForGrade(subject.targetGrade, ADVANCED_COURSE_GRADING);
       const needed = Math.max(0, targetAvg - avg);
       
       console.log(`📊 ${selectedSemester || '全学期'}の計算結果:`);
@@ -279,16 +280,15 @@ const SubGradeCalculator: React.FC = () => {
         subject.targetGrade,
         100,
         subject.participationScore,
-        'regular'
+        ADVANCED_COURSE_GRADING
       );
       
       const keepGradeScore = calculateRequiredScoreToKeepGrade(
         relevantTests,
         subject.participationScore,
         grade,
-        100,
         subject.participationScore,
-        'regular'
+        ADVANCED_COURSE_GRADING
       );
       
       return {
@@ -640,10 +640,10 @@ const SubGradeCalculator: React.FC = () => {
                   outline: 'none'
                 }}
               >
-                <option value={5}>5 (85点以上)</option>
-                <option value={4}>4 (70-84点)</option>
-                <option value={3}>3 (55-69点)</option>
-                <option value={2}>2 (40-54点)</option>
+                <option value={5}>5 (80点以上)</option>
+                <option value={4}>4 (65-79点)</option>
+                <option value={3}>3 (50-64点)</option>
+                <option value={2}>2 (40-49点)</option>
                 <option value={1}>1 (39点以下)</option>
               </select>
             </div>
@@ -1179,4 +1179,4 @@ const SubGradeCalculator: React.FC = () => {
   );
 };
 
-export default SubGradeCalculator;
+export default GradeCalculator;
