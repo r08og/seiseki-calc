@@ -925,6 +925,34 @@ const GradeCalculator: React.FC = () => {
                               : `${viewSemester}の次のテストで約${finalResults.nextTestScore}点以上取れば目標達成です！`
                             }
                           </div>
+                          {!finalResults.isAchieved && (
+                            <div style={{ 
+                              fontSize: '0.95rem', 
+                              color: '#666', 
+                              marginTop: '8px',
+                              fontStyle: 'italic'
+                            }}>
+                              💡 平常点を{currentSubject.participationScore}点と仮定した場合
+                            </div>
+                          )}
+                          {!finalResults.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
+                            <div style={{
+                              marginTop: '12px',
+                              padding: '12px',
+                              backgroundColor: '#e8f5e8',
+                              borderRadius: '8px',
+                              fontSize: '0.9rem',
+                              color: '#2e7d32'
+                            }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>📈 おすすめの戦略:</div>
+                              <div>
+                                前回: テスト{Math.round(currentSubject.currentTests[currentSubject.currentTests.length - 1]?.score || 0)}点 + 平常点{currentSubject.participationScore}点
+                              </div>
+                              <div>
+                                次回: テスト{finalResults.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </>
                     )}
