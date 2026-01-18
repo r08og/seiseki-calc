@@ -273,73 +273,6 @@ const SubGradeCalculator: React.FC = () => {
           marginBottom: '20px',
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
         }}>
-
-          {/* 科目選択と学期選択 */}
-          {subjects.length > 0 && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    marginBottom: '10px', 
-                    color: '#333' 
-                  }}>
-                    📚 科目を選択
-                  </label>
-                  <select
-                    value={currentSubjectId}
-                    onChange={(e) => setCurrentSubjectId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '15px',
-                      border: '2px solid #e1e5e9',
-                      borderRadius: '12px',
-                      fontSize: '16px',
-                      outline: 'none'
-                    }}
-                  >
-                    {subjects.map(subject => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.subjectName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    marginBottom: '10px', 
-                    color: '#333' 
-                  }}>
-                    📅 評定を見る学期
-                  </label>
-                  <select
-                    value={viewSemester}
-                    onChange={(e) => setViewSemester(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '15px',
-                      border: '2px solid #e1e5e9',
-                      borderRadius: '12px',
-                      fontSize: '16px',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">学期を選択してください</option>
-                    <option value="一学期">一学期</option>
-                    <option value="二学期">二学期</option>
-                    <option value="三学期">三学期</option>
-                    <option value="全学期">全学期</option>
-                  </select>
-                </div>
-              </div>
-              <hr style={{ border: 'none', borderTop: '2px solid #f0f0f0', margin: '25px 0' }} />
-            </>
-          )}
           
           {/* 科目名入力 */}
           <div style={{ marginBottom: '20px' }}>
@@ -614,35 +547,66 @@ const SubGradeCalculator: React.FC = () => {
             marginBottom: '20px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }}>
-            {/* 学期選択 */}
-            <div style={{ marginBottom: '25px' }}>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '1.1rem', 
-                fontWeight: '600', 
-                marginBottom: '10px', 
-                color: '#333' 
-              }}>
-                📊 評定を確認する学期
-              </label>
-              <select
-                value={viewSemester}
-                onChange={(e) => setViewSemester(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '15px',
-                  border: '2px solid #e1e5e9',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  backgroundColor: 'white'
-                }}
-              >
-                <option value="">学期を選択してください</option>
-                <option value="一学期">一学期</option>
-                <option value="二学期">二学期</option>
-                <option value="三学期">三学期</option>
-                <option value="全学期">全学期</option>
-              </select>
+            {/* 科目選択と学期選択 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '1.1rem', 
+                  fontWeight: '600', 
+                  marginBottom: '10px', 
+                  color: '#333' 
+                }}>
+                  � 科目を選択
+                </label>
+                <select
+                  value={currentSubjectId}
+                  onChange={(e) => setCurrentSubjectId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '15px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    outline: 'none'
+                  }}
+                >
+                  {subjects.map(subject => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.subjectName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '1.1rem', 
+                  fontWeight: '600', 
+                  marginBottom: '10px', 
+                  color: '#333' 
+                }}>
+                  📅 評定を見る学期
+                </label>
+                <select
+                  value={viewSemester}
+                  onChange={(e) => setViewSemester(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '15px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">学期を選択してください</option>
+                  <option value="一学期">一学期</option>
+                  <option value="二学期">二学期</option>
+                  <option value="三学期">三学期</option>
+                  <option value="全学期">全学期</option>
+                </select>
+              </div>
             </div>
 
             {/* 計算結果表示 */}
