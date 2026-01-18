@@ -145,8 +145,8 @@ const SubGradeCalculator: React.FC = () => {
     return calculatedResults;
   }, [currentSubject, viewSemester]);
 
-  // フォーム送信ハンドラ
-  const handleSubmit = () => {
+  // フォーム送信ハンドラ（主要教科と同じ名前）
+  const addTest = () => {
     if (!formData.subjectName || !formData.semester || !formData.testName || !formData.score) {
       alert('すべての項目を入力してください');
       return;
@@ -203,7 +203,7 @@ const SubGradeCalculator: React.FC = () => {
     targetSubject.currentTests.push(newTest);
     setSubjects(updatedSubjects);
     
-    // 表示学期を入力学期に設定
+    // 表示学期を入力学期に設定（主要教科と同じ動作）
     setViewSemester(formData.semester);
 
     // フォームをリセット（科目名は保持）
@@ -576,7 +576,7 @@ const SubGradeCalculator: React.FC = () => {
 
           {/* 追加ボタン */}
           <button
-            onClick={handleSubmit}
+            onClick={addTest}
             style={{
               width: '100%',
               padding: '18px',
@@ -606,7 +606,7 @@ const SubGradeCalculator: React.FC = () => {
         </div>
 
         {/* 結果表示 */}
-        {results && (
+        {currentSubject && (
           <div style={{
             backgroundColor: 'white',
             borderRadius: '20px',
@@ -614,170 +614,198 @@ const SubGradeCalculator: React.FC = () => {
             marginBottom: '20px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }}>
-            <h2 style={{ margin: '0 0 25px 0', color: '#333', fontSize: '1.8rem', textAlign: 'center' }}>
-              📊 {formData.subjectName} の結果
-            </h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginBottom: '25px' }}>
-              {/* 現在の評定 */}
-              <div style={{
-                textAlign: 'center',
-                padding: '25px',
-                backgroundColor: results.currentGrade >= formData.targetGrade ? '#e8f5e8' : '#fff3e0',
-                borderRadius: '15px',
-                border: `3px solid ${results.currentGrade >= formData.targetGrade ? '#4CAF50' : '#FF9800'}`
-              }}>
-                <div style={{ 
-                  fontSize: '3rem', 
-                  fontWeight: 'bold', 
-                  color: results.currentGrade >= formData.targetGrade ? '#4CAF50' : '#FF9800',
-                  marginBottom: '10px'
-                }}>
-                  {results.currentGrade}
-                </div>
-                <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>現在の評定</div>
-                <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {results.currentAverage}点</div>
-              </div>
-              
-              {/* 目標評定 */}
-              <div style={{
-                textAlign: 'center',
-                padding: '25px',
-                backgroundColor: '#f0f8ff',
-                borderRadius: '15px',
-                border: '3px solid #2196F3'
-              }}>
-                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#2196F3', marginBottom: '10px' }}>
-                  {formData.targetGrade}
-                </div>
-                <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>目標評定</div>
-                <div style={{ fontSize: '0.8rem', color: '#888' }}>
-                  {formData.targetGrade === 5 && '5 (85点以上)'}
-                  {formData.targetGrade === 4 && '4 (70-84点)'}
-                  {formData.targetGrade === 3 && '3 (55-69点)'}
-                  {formData.targetGrade === 2 && '2 (40-54点)'}
-                  {formData.targetGrade === 1 && '1 (39点以下)'}
-                </div>
-              </div>
-              
-              {/* 達成状況 */}
-              <div style={{
-                textAlign: 'center',
-                padding: '25px',
-                backgroundColor: results.isAchieved ? '#e8f5e8' : '#ffebee',
-                borderRadius: '15px',
-                border: `3px solid ${results.isAchieved ? '#4CAF50' : '#f44336'}`
-              }}>
-                <div style={{ 
-                  fontSize: '3rem', 
-                  fontWeight: 'bold', 
-                  color: results.isAchieved ? '#4CAF50' : '#f44336',
-                  marginBottom: '10px'
-                }}>
-                  {results.isAchieved ? '🎉' : '💪'}
-                </div>
-                <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>
-                  {results.isAchieved ? '達成済み！' : '頑張ろう！'}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#888' }}>
-                  {results.isAchieved ? 'おめでとう' : '次回頑張ろう'}
-                </div>
-              </div>
-            </div>
-
-            {/* 具体的なアドバイス */}
-            <div style={{
-              padding: '20px',
-              backgroundColor: results.isAchieved ? '#e8f5e8' : '#fff3e0',
-              borderRadius: '15px',
-              border: `2px solid ${results.isAchieved ? '#4CAF50' : '#FF9800'}`,
-              textAlign: 'center'
-            }}>
-              <div style={{ 
-                fontSize: '1.3rem', 
+            {/* 学期選択 */}
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '1.1rem', 
                 fontWeight: '600', 
-                color: results.isAchieved ? '#2e7d32' : '#e65100',
-                marginBottom: '10px'
+                marginBottom: '10px', 
+                color: '#333' 
               }}>
-                {results.isAchieved ? '🎯 目標達成！' : '📈 次のテストで頑張ろう！'}
-              </div>
-              <div style={{ fontSize: '1.1rem', color: results.isAchieved ? '#2e7d32' : '#bf360c' }}>
-                {results.isAchieved 
-                  ? `素晴らしい！評定${formData.targetGrade}を達成しています！`
-                  : `次のテストで約${results.nextTestScore}点以上取れば目標達成です！`
-                }
-              </div>
-              {!results.isAchieved && (
-                <div style={{ 
-                  fontSize: '0.95rem', 
-                  color: '#666', 
-                  marginTop: '8px',
-                  fontStyle: 'italic'
-                }}>
-                  💡 平常点を{formData.participation}点と仮定した場合
-                </div>
-              )}
-              {!results.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  backgroundColor: '#e8f5e8',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  color: '#2e7d32'
-                }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>📈 おすすめの戦略:</div>
-                  <div>
-                    前回: テスト{Math.round(currentSubject.currentTests[currentSubject.currentTests.length - 1]?.score || 0)}点 + 平常点{currentSubject.participationScore}点
-                  </div>
-                  <div>
-                    次回: テスト{results.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
-                  </div>
-                </div>
-              )}
+                📊 評定を確認する学期
+              </label>
+              <select
+                value={viewSemester}
+                onChange={(e) => setViewSemester(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="">学期を選択してください</option>
+                <option value="一学期">一学期</option>
+                <option value="二学期">二学期</option>
+                <option value="三学期">三学期</option>
+                <option value="全学期">全学期</option>
+              </select>
             </div>
 
-            {/* テスト結果表示 */}
-            <div style={{ marginTop: '25px' }}>
-              <h3 style={{ color: '#333', marginBottom: '15px' }}>📝 テスト結果</h3>
-              <div style={{
-                backgroundColor: '#f8f9fa',
-                borderRadius: '12px',
-                padding: '20px',
-                border: '1px solid #e9ecef'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontWeight: '600' }}>科目:</span>
-                  <span>{formData.subjectName}</span>
+            {/* 計算結果表示 */}
+            {results ? (
+              <>
+                <h3 style={{ color: '#333', marginBottom: '20px', fontSize: '1.5rem', textAlign: 'center' }}>
+                  🎨 {currentSubject.subjectName}の評定結果
+                </h3>
+                
+                {/* 評定カード */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '15px', 
+                  marginBottom: '25px',
+                  flexWrap: 'wrap'
+                }}>
+                  {/* 現在の評定 */}
+                  <div style={{
+                    flex: '1',
+                    minWidth: '120px',
+                    backgroundColor: results.currentGrade >= formData.targetGrade ? '#e8f5e8' : '#fff3e0',
+                    border: `3px solid ${results.currentGrade >= formData.targetGrade ? '#4caf50' : '#ff9800'}`,
+                    borderRadius: '15px',
+                    padding: '20px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '5px' }}>
+                      {results.currentGrade}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#666' }}>
+                      {viewSemester}評定
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      平均: {results.currentAverage}点
+                    </div>
+                  </div>
+
+                  {/* 目標評定 */}
+                  <div style={{
+                    flex: '1',
+                    minWidth: '120px',
+                    backgroundColor: '#e3f2fd',
+                    border: '3px solid #2196f3',
+                    borderRadius: '15px',
+                    padding: '20px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '5px' }}>
+                      {formData.targetGrade}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#666' }}>
+                      目標評定
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      必要: {results.targetAverage}点
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                      {formData.targetGrade === 5 && '5 (85点以上)'}
+                      {formData.targetGrade === 4 && '4 (70-84点)'}
+                      {formData.targetGrade === 3 && '3 (55-69点)'}
+                      {formData.targetGrade === 2 && '2 (40-54点)'}
+                      {formData.targetGrade === 1 && '1 (39点以下)'}
+                    </div>
+                  </div>
+
+                  {/* 達成状況 */}
+                  <div style={{
+                    flex: '1',
+                    minWidth: '120px',
+                    backgroundColor: results.isAchieved ? '#e8f5e8' : '#fce4ec',
+                    border: `3px solid ${results.isAchieved ? '#4caf50' : '#e91e63'}`,
+                    borderRadius: '15px',
+                    padding: '20px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '5px' }}>
+                      {results.isAchieved ? '🎉' : '�'}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#666' }}>
+                      {results.isAchieved ? '達成済み！' : '頑張ろう！'}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      {results.isAchieved ? 'おめでとう！' : '次回頑張ろう'}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontWeight: '600' }}>学期:</span>
-                  <span>{formData.semester}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontWeight: '600' }}>テスト:</span>
-                  <span>{formData.testName}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontWeight: '600' }}>得点:</span>
-                  <span>
-                    {currentSubject && currentSubject.currentTests.length > 0 
-                      ? `${currentSubject.currentTests[currentSubject.currentTests.length - 1].score}/${currentSubject.currentTests[currentSubject.currentTests.length - 1].maxScore}点`
-                      : '未入力'
+
+                {/* 詳細メッセージ */}
+                <div style={{
+                  backgroundColor: results.isAchieved ? '#e8f5e8' : '#fff3e0',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ 
+                    fontSize: '1.2rem', 
+                    fontWeight: 'bold', 
+                    marginBottom: '8px',
+                    color: results.isAchieved ? '#2e7d32' : '#f57c00'
+                  }}>
+                    {results.isAchieved ? `🎯 ${viewSemester}目標達成！` : `📈 ${viewSemester}で頑張ろう！`}
+                  </div>
+                  <div style={{ fontSize: '1.1rem', color: results.isAchieved ? '#2e7d32' : '#bf360c' }}>
+                    {results.isAchieved 
+                      ? `素晴らしい！${viewSemester}で評定${formData.targetGrade}を達成しています！`
+                      : `${viewSemester}の次のテストで約${results.nextTestScore}点以上取れば目標達成です！`
                     }
-                  </span>
+                  </div>
+                  {!results.isAchieved && (
+                    <div style={{ 
+                      fontSize: '0.95rem', 
+                      color: '#666', 
+                      marginTop: '8px',
+                      fontStyle: 'italic'
+                    }}>
+                      💡 平常点を{currentSubject.participationScore}点と仮定した場合
+                    </div>
+                  )}
+                  {!results.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      backgroundColor: '#e8f5e8',
+                      borderRadius: '8px',
+                      fontSize: '0.9rem',
+                      color: '#2e7d32'
+                    }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>📈 おすすめの戦略:</div>
+                      <div>
+                        前回: テスト{Math.round(currentSubject.currentTests[currentSubject.currentTests.length - 1]?.score || 0)}点 + 平常点{currentSubject.participationScore}点
+                      </div>
+                      <div>
+                        次回: テスト{results.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: '600' }}>平常点:</span>
-                  <span>{formData.participation}点</span>
-                </div>
+              </>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '15px',
+                border: '2px solid #e9ecef'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '15px' }}>📋</div>
+                <h3 style={{ color: '#333', marginBottom: '10px' }}>
+                  {viewSemester ? `${viewSemester}のテストを追加してください` : '学期を選択してください'}
+                </h3>
+                <p style={{ color: '#666', fontSize: '1rem' }}>
+                  {viewSemester 
+                    ? `上記フォームから${viewSemester}のテストを追加してください`
+                    : '評定を確認したい学期を選択してから、テスト結果を確認できます'
+                  }
+                </p>
               </div>
-            </div>
+            )}
           </div>
         )}
 
         {/* 初回メッセージ */}
-        {!results && (
+        {!currentSubject && (
           <div style={{
             backgroundColor: 'white',
             borderRadius: '20px',
@@ -791,7 +819,8 @@ const SubGradeCalculator: React.FC = () => {
             </h2>
             <p style={{ color: '#666', fontSize: '1.2rem', lineHeight: '1.6' }}>
               美術・音楽・技術家庭・保健体育の<br />
-              テスト結果を入力してください。
+              テスト結果を入力してください。<br />
+              評定基準は85点で評定5です。
             </p>
           </div>
         )}
