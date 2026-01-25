@@ -80,7 +80,16 @@ const SubGradeCalculator: React.FC = () => {
       });
 
       if (relevantTests.length === 0) {
-        return null;        };
+        return {
+          currentAverage: 0,
+          currentGrade: 0,
+          targetAverage: getRequiredAverageForGrade(subject.targetGrade, 'regular'),
+          pointsNeeded: getRequiredAverageForGrade(subject.targetGrade, 'regular'),
+          isAchieved: false,
+          nextTestScore: 0,
+          keepGradeScore: 0,
+          testCount: 0
+        };
       }
 
       const avg = calculateWeightedAverage(relevantTests, [], subject.participationScore);
