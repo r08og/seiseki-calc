@@ -144,11 +144,14 @@ const SubGradeCalculator: React.FC = () => {
     console.log(`- 選択学期: ${selectedSemester}`);
     
     const calculatedResults = getResults(currentSubject, selectedSemester);
-    console.log(`- 計算結果: 評定${calculatedResults?.currentGrade} (テスト数: ${calculatedResults?.testCount})`);
-    console.log(`- 達成判定: ${calculatedResults?.isAchieved} (現在${calculatedResults?.currentGrade} >= 目標${currentSubject.targetGrade})`);
     
-    return calculatedResults;
-  }, [currentSubject, viewSemester]);
+    if (calculatedResults === null) {
+      console.log(`- 計算結果: テストなしのためnull`);
+      return null;
+    }
+    
+    console.log(`- 計算結果: 評定${calculatedResults.currentGrade} (テスト数: ${calculatedResults.testCount})`);
+    console.log(`- 達成判定: ${calculatedResults.isAchieved} (現在${calculatedResults.currentGrade} >= 目標${currentSubject.targetGrade})`);  }, [currentSubject, viewSemester]);
 
   // フォーム送信ハンドラ（主要教科と同じ名前）
   const addTest = () => {
