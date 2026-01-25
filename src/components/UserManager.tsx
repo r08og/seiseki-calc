@@ -31,11 +31,11 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
   };
 
   const handleSelectUser = (user: User) => {
-    // 緊急修正：sさんは強制的に進学コースにする
+    // 緊急修正：sさんは強制的に進学・特進コースにする
     let courseType = user.courseType || 'regular';
     if (user.name === 's' || user.name === 'sさん') {
       courseType = 'advanced';
-      console.log('sさんを強制的に進学コースに設定しました');
+      console.log('sさんを強制的に進学・特進コースに設定しました');
     }
     
     const userSession: UserSession = {
@@ -133,7 +133,7 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
                       {user.name} {user.courseType === 'advanced' ? '🎓' : '📚'}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>
-                      {user.courseType === 'advanced' ? '進学コース' : '普通コース'} / 作成日: {user.createdAt.toLocaleDateString('ja-JP')}
+                      {user.courseType === 'advanced' ? '進学・特進コース' : '普通コース'} / 作成日: {user.createdAt.toLocaleDateString('ja-JP')}
                     </div>
                   </div>
                   <button
@@ -270,7 +270,7 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
                   }}
                 >
                   <option value="regular">📚 普通コース</option>
-                  <option value="advanced">🎓 進学コース</option>
+                  <option value="advanced">🎓 進学・特進コース</option>
                 </select>
                 <div style={{ 
                   marginTop: '8px', 
@@ -280,7 +280,7 @@ const UserManager: React.FC<UserManagerProps> = ({ onUserSelected }) => {
                   fontWeight: '600'
                 }}>
                   {newUserCourse === 'advanced' 
-                    ? '🎓 進学コース: 主要教科80点以上、技能評価85点以上で評定5' 
+                    ? '🎓 進学・特進コース: 主要教科80点以上、技能評価85点以上で評定5' 
                     : '📚 普通コース: 主要教科85点以上、技能評価85点以上で評定5'
                   }
                 </div>

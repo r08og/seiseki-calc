@@ -545,7 +545,7 @@ const SubGradeCalculator: React.FC = () => {
                   const currentUser = getCurrentUser();
                   const isAdvanced = currentUser?.courseType === 'advanced';
                   return isAdvanced ? (
-                    // 進学コース
+                    // 進学・特進コース
                     <>
                       <option value={5}>5 (80点以上)</option>
                       <option value={4}>4 (65-79点)</option>

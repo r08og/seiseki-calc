@@ -6,7 +6,8 @@ import {
   getRequiredAverageForGrade,
   calculateRequiredScoreForNextTest,
   calculateRequiredScoreToKeepGrade,
-  ADVANCED_COURSE_GRADING
+  ADVANCED_COURSE_GRADING,
+  REGULAR_COURSE_GRADING
 } from '../utils/gradeCalculator';
 import { getCurrentUser, getUserStorageKey } from '../utils/userManager';
 
@@ -217,6 +218,12 @@ const GradeCalculator: React.FC = () => {
     console.log('現在の平常点:', formData.participation); // デバッグ用追加
     saveData(newSubjects);
     
+    // テスト追加成功のアラート表示
+    alert('テスト結果が保存されました！');
+    
+    // 追加したテストの学期を自動選択
+    setViewSemester(formData.semester);
+    
     // フォームリセット（科目名は残す）
     setFormData(prev => ({
       ...prev,
@@ -227,7 +234,7 @@ const GradeCalculator: React.FC = () => {
   };
 
   // 計算結果取得（選択された学期のテストのみを使用）
-  const getResults = (subject: SubjectGrades, selectedSemester?: string) => {
+  const getResults = (subject: SubjectGrades, selectedSemester?: string, courseType: 'advanced' | 'regular' = 'advanced') => {
     try {
       let relevantTests: TestScore[] = [];
       
@@ -252,7 +259,7 @@ const GradeCalculator: React.FC = () => {
         return {
           currentAverage: 0,
           currentGrade: 1,
-          targetAverage: getRequiredAverageForGrade(subject.targetGrade, ADVANCED_COURSE_GRADING),
+          targetAverage: getRequiredAverageForGrade(subject.targetGrade, courseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING),
           pointsNeeded: 0,
           isAchieved: false,
           nextTestScore: 0,
@@ -263,11 +270,11 @@ const GradeCalculator: React.FC = () => {
 
       // 重み付き平均を計算（テスト80% + 平常点20%）
       const avg = calculateWeightedAverage(relevantTests, [], subject.participationScore);
-      const grade = calculateGradeFromAverage(avg, ADVANCED_COURSE_GRADING);
-      const targetAvg = getRequiredAverageForGrade(subject.targetGrade, ADVANCED_COURSE_GRADING);
+      const grade = calculateGradeFromAverage(avg, courseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING);
+      const targetAvg = getRequiredAverageForGrade(subject.targetGrade, courseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING);
       const needed = Math.max(0, targetAvg - avg);
       
-      console.log(`📊 ${selectedSemester || '全学期'}の計算結果:`);
+      console.log(`📊 ${selectedSemester || '全学期'}の計算結果 (${courseType === 'advanced' ? '進学' : '普通'}コース):`);
       console.log(`- 平均点: ${avg.toFixed(1)}点`);
       console.log(`- 評定: ${grade}`);
       console.log(`- 目標平均: ${targetAvg}点`);
@@ -280,7 +287,7 @@ const GradeCalculator: React.FC = () => {
         subject.targetGrade,
         100,
         subject.participationScore,
-        ADVANCED_COURSE_GRADING
+        courseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING
       );
       
       const keepGradeScore = calculateRequiredScoreToKeepGrade(
@@ -288,7 +295,7 @@ const GradeCalculator: React.FC = () => {
         subject.participationScore,
         grade,
         subject.participationScore,
-        ADVANCED_COURSE_GRADING
+        courseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING
       );
       
       return {
@@ -318,12 +325,17 @@ const GradeCalculator: React.FC = () => {
       return null;
     }
     
+    // ユーザーのコース情報を取得
+    const currentUser = getCurrentUser();
+    const userCourseType = currentUser?.courseType || 'advanced';
+    
     const selectedSemester = viewSemester;
     console.log(`\n🎯 評定表示用計算実行:`);
     console.log(`- 科目: ${currentSubject.subjectName}`);
     console.log(`- 選択学期: ${selectedSemester}`);
+    console.log(`- コース: ${userCourseType === 'advanced' ? '進学' : '普通'}`);
     
-    const calculatedResults = getResults(currentSubject, selectedSemester);
+    const calculatedResults = getResults(currentSubject, selectedSemester, userCourseType);
     console.log(`- 計算結果: 評定${calculatedResults?.currentGrade} (テスト数: ${calculatedResults?.testCount})`);
     
     return calculatedResults;
@@ -373,7 +385,11 @@ const GradeCalculator: React.FC = () => {
             🎯 評定計算機
           </h1>
           <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-            主要教科用・80点で評定5
+            {(() => {
+              const currentUser = getCurrentUser();
+              const userCourseType = currentUser?.courseType || 'advanced';
+              return `主要教科用・${userCourseType === 'advanced' ? '進学・特進コース（80点で評定5）' : '普通コース（85点で評定5）'}`;
+            })()}
           </p>
         </div>
 
@@ -640,11 +656,28 @@ const GradeCalculator: React.FC = () => {
                   outline: 'none'
                 }}
               >
-                <option value={5}>5 (80点以上)</option>
-                <option value={4}>4 (65-79点)</option>
-                <option value={3}>3 (50-64点)</option>
-                <option value={2}>2 (40-49点)</option>
-                <option value={1}>1 (39点以下)</option>
+                {(() => {
+                  const currentUser = getCurrentUser();
+                  const userCourseType = currentUser?.courseType || 'advanced';
+                  
+                  return userCourseType === 'advanced' ? (
+                    <>
+                      <option value={5}>5 (80点以上)</option>
+                      <option value={4}>4 (65-79点)</option>
+                      <option value={3}>3 (50-64点)</option>
+                      <option value={2}>2 (40-49点)</option>
+                      <option value={1}>1 (39点以下)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={5}>5 (85点以上)</option>
+                      <option value={4}>4 (70-84点)</option>
+                      <option value={3}>3 (55-69点)</option>
+                      <option value={2}>2 (40-54点)</option>
+                      <option value={1}>1 (39点以下)</option>
+                    </>
+                  );
+                })()}
               </select>
             </div>
             <div>
@@ -724,31 +757,29 @@ const GradeCalculator: React.FC = () => {
             </h2>
             
             {/* 評定表示用の学期選択 */}
-            <div style={{ marginBottom: '25px', textAlign: 'center' }}>
+            <div style={{ marginBottom: '25px' }}>
               <label style={{ 
                 display: 'block', 
-                fontSize: '1rem', 
+                fontSize: '1.1rem', 
                 fontWeight: '600', 
                 marginBottom: '10px', 
-                color: '#666' 
+                color: '#333' 
               }}>
-                📅 評定を見たい学期を選択
+                📅 評定を見る学期
               </label>
               <select
                 value={viewSemester}
                 onChange={(e) => setViewSemester(e.target.value)}
                 style={{
-                  padding: '10px 15px',
+                  width: '100%',
+                  padding: '15px',
                   border: '2px solid #e1e5e9',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  backgroundColor: '#ffffff',
-                  color: '#333',
-                  minWidth: '150px'
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  outline: 'none'
                 }}
               >
-                <option value="">学期を選択</option>
+                <option value="">学期を選択してください</option>
                 <option value="一学期">一学期</option>
                 <option value="二学期">二学期</option>
                 <option value="三学期">三学期</option>
@@ -789,12 +820,17 @@ const GradeCalculator: React.FC = () => {
               // 学期が選択されている場合の評定表示
               // 特定の学期が選択されている場合、その学期の評定のみ表示
               (() => {
+                // ユーザーのコース情報を取得
+                const currentUser = getCurrentUser();
+                const userCourseType = currentUser?.courseType || 'advanced';
+                
                 // 学期を明示的に指定して再計算
-                const semesterResults = getResults(currentSubject, viewSemester);
+                const semesterResults = getResults(currentSubject, viewSemester, userCourseType);
                 
                 // デバッグ: 学期選択時の計算確認
                 console.log(`\n🎯 ${viewSemester}表示用計算:`);
                 console.log(`選択学期: ${viewSemester}`);
+                console.log(`コース: ${userCourseType === 'advanced' ? '進学' : '普通'}`);
                 console.log(`直接計算結果: 評定${semesterResults?.currentGrade} (テスト数: ${semesterResults?.testCount})`);
                 console.log(`useMemo結果: 評定${results?.currentGrade} (テスト数: ${results?.testCount})`);
                 
@@ -840,14 +876,14 @@ const GradeCalculator: React.FC = () => {
                           <div style={{
                             textAlign: 'center',
                             padding: '25px',
-                            backgroundColor: finalResults.currentGrade >= formData.targetGrade ? '#e8f5e8' : '#fff3e0',
+                            backgroundColor: finalResults.currentGrade >= currentSubject?.targetGrade ? '#e8f5e8' : '#fff3e0',
                             borderRadius: '15px',
-                            border: `3px solid ${finalResults.currentGrade >= formData.targetGrade ? '#4CAF50' : '#FF9800'}`
+                            border: `3px solid ${finalResults.currentGrade >= currentSubject?.targetGrade ? '#4CAF50' : '#FF9800'}`
                           }}>
                             <div style={{ 
                               fontSize: '3rem', 
                               fontWeight: 'bold', 
-                              color: finalResults.currentGrade >= formData.targetGrade ? '#4CAF50' : '#FF9800',
+                              color: finalResults.currentGrade >= currentSubject?.targetGrade ? '#4CAF50' : '#FF9800',
                               marginBottom: '10px'
                             }}>
                               {finalResults.currentGrade}
@@ -865,7 +901,7 @@ const GradeCalculator: React.FC = () => {
                             border: '3px solid #2196F3'
                           }}>
                             <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#2196F3', marginBottom: '10px' }}>
-                              {formData.targetGrade}
+                              {currentSubject?.targetGrade}
                             </div>
                             <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>目標評定</div>
                             <div style={{ fontSize: '0.9rem', color: '#888' }}>必要: {finalResults.targetAverage}点</div>
@@ -875,53 +911,43 @@ const GradeCalculator: React.FC = () => {
                           <div style={{
                             textAlign: 'center',
                             padding: '25px',
-                            backgroundColor: finalResults.isAchieved ? '#e8f5e8' : '#ffebee',
+                            backgroundColor: finalResults.isAchieved ? '#e8f5e8' : '#fce4ec',
                             borderRadius: '15px',
-                            border: `3px solid ${finalResults.isAchieved ? '#4CAF50' : '#f44336'}`
+                            border: `3px solid ${finalResults.isAchieved ? '#4CAF50' : '#E91E63'}`
                           }}>
                             <div style={{ 
                               fontSize: '3rem', 
-                              fontWeight: 'bold', 
-                              color: finalResults.isAchieved ? '#4CAF50' : '#f44336',
-                              marginBottom: '10px'
+                              marginBottom: '5px'
                             }}>
                               {finalResults.isAchieved ? '🎉' : '💪'}
                             </div>
-                            <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>
+                            <div style={{ fontSize: '1rem', fontWeight: '600', color: '#666', marginBottom: '5px' }}>
                               {finalResults.isAchieved ? '達成済み！' : '頑張ろう！'}
                             </div>
                             <div style={{ fontSize: '0.9rem', color: '#888' }}>
-                              {finalResults.isAchieved ? 'おめでとう' : (
-                                <div>
-                                  <div>あと{finalResults.pointsNeeded}点</div>
-                                  <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                                    (平常点{formData.participation}点で計算)
-                                  </div>
-                                </div>
-                              )}
+                              {finalResults.isAchieved ? 'おめでとう！' : '次回頑張ろう'}
                             </div>
                           </div>
                         </div>
 
-                        {/* 具体的なアドバイス */}
+                        {/* 詳細メッセージ */}
                         <div style={{
-                          padding: '20px',
                           backgroundColor: finalResults.isAchieved ? '#e8f5e8' : '#fff3e0',
-                          borderRadius: '15px',
-                          border: `2px solid ${finalResults.isAchieved ? '#4CAF50' : '#FF9800'}`,
-                          textAlign: 'center'
+                          borderRadius: '12px',
+                          padding: '20px',
+                          marginBottom: '20px'
                         }}>
                           <div style={{ 
-                            fontSize: '1.3rem', 
-                            fontWeight: '600', 
-                            color: finalResults.isAchieved ? '#2e7d32' : '#e65100',
-                            marginBottom: '10px'
+                            fontSize: '1.2rem', 
+                            fontWeight: 'bold', 
+                            marginBottom: '8px',
+                            color: finalResults.isAchieved ? '#2e7d32' : '#f57c00'
                           }}>
                             {finalResults.isAchieved ? `🎯 ${viewSemester}目標達成！` : `📈 ${viewSemester}で頑張ろう！`}
                           </div>
                           <div style={{ fontSize: '1.1rem', color: finalResults.isAchieved ? '#2e7d32' : '#bf360c' }}>
                             {finalResults.isAchieved 
-                              ? `素晴らしい！${viewSemester}で評定${formData.targetGrade}を達成しています！`
+                              ? `素晴らしい！${viewSemester}で評定${currentSubject?.targetGrade}を達成しています！`
                               : `${viewSemester}の次のテストで約${finalResults.nextTestScore}点以上取れば目標達成です！`
                             }
                           </div>

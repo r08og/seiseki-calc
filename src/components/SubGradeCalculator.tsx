@@ -50,6 +50,12 @@ const SubGradeCalculator: React.FC = () => {
         
         if (parsed.length > 0 && !currentSubjectId) {
           setCurrentSubjectId(parsed[0].id);
+          setFormData(prev => ({ 
+            ...prev, 
+            subjectName: parsed[0].subjectName,
+            targetGrade: parsed[0].targetGrade,
+            participation: parsed[0].participationScore.toString()
+          }));
         }
       } catch (error) {
         console.error('データの読み込みに失敗しました:', error);
@@ -125,6 +131,13 @@ const SubGradeCalculator: React.FC = () => {
 
   const currentSubject = subjects.find(s => s.id === currentSubjectId);
   
+  // デバッグ用ログ
+  React.useEffect(() => {
+    console.log('🔍 技能教科 - currentSubjectId:', currentSubjectId);
+    console.log('🔍 技能教科 - currentSubject:', currentSubject?.subjectName);
+    console.log('🔍 技能教科 - subjects:', subjects.map(s => ({ id: s.id, name: s.subjectName })));
+  }, [currentSubjectId, currentSubject, subjects]);
+  
   // 結果を計算 - 評定表示用の学期選択を使用
   const results = React.useMemo(() => {
     if (!currentSubject) return null;
@@ -141,6 +154,7 @@ const SubGradeCalculator: React.FC = () => {
     
     const calculatedResults = getResults(currentSubject, selectedSemester);
     console.log(`- 計算結果: 評定${calculatedResults?.currentGrade} (テスト数: ${calculatedResults?.testCount})`);
+    console.log(`- 達成判定: ${calculatedResults?.isAchieved} (現在${calculatedResults?.currentGrade} >= 目標${currentSubject.targetGrade})`);
     
     return calculatedResults;
   }, [currentSubject, viewSemester]);
@@ -285,11 +299,74 @@ const SubGradeCalculator: React.FC = () => {
             }}>
               📚 科目名
             </label>
+            
+            {subjects.length > 0 && (
+              <div style={{ marginBottom: '15px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {subjects.map(subject => (
+                    <button
+                      key={subject.id}
+                      onClick={() => {
+                        console.log('科目選択:', subject.subjectName); // デバッグ用
+                        console.log('選択前のcurrentSubjectId:', currentSubjectId);
+                        console.log('選択する科目のID:', subject.id);
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          subjectName: subject.subjectName,
+                          targetGrade: subject.targetGrade,
+                          participation: subject.participationScore.toString()
+                        }));
+                        setCurrentSubjectId(subject.id);
+                        console.log('科目選択完了:', subject.subjectName);
+                        
+                        // 選択した科目に基づいて表示学期をリセット
+                        setViewSemester('');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: subject.subjectName === formData.subjectName ? '#4CAF50' : '#e9ecef',
+                        color: subject.subjectName === formData.subjectName ? 'white' : '#333',
+                        border: 'none',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {subject.subjectName}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ textAlign: 'center', margin: '15px 0', color: '#666' }}>
+                  または新しい科目名を入力
+                </div>
+              </div>
+            )}
+            
             <input
               type="text"
               placeholder="例：美術、音楽、技術家庭..."
               value={formData.subjectName}
-              onChange={(e) => setFormData(prev => ({ ...prev, subjectName: e.target.value }))}
+              onChange={(e) => {
+                const newSubjectName = e.target.value;
+                setFormData(prev => ({ ...prev, subjectName: newSubjectName }));
+                
+                // 既存科目と一致する場合、その科目を選択
+                const existingSubject = subjects.find(s => s.subjectName === newSubjectName);
+                if (existingSubject) {
+                  setCurrentSubjectId(existingSubject.id);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    subjectName: existingSubject.subjectName,
+                    targetGrade: existingSubject.targetGrade,
+                    participation: existingSubject.participationScore.toString()
+                  }));
+                  setViewSemester('');
+                } else {
+                  // 新規科目の場合はcurrentSubjectIdをクリア
+                  setCurrentSubjectId('');
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '15px',
@@ -547,123 +624,93 @@ const SubGradeCalculator: React.FC = () => {
             marginBottom: '20px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }}>
-            {/* 科目選択と学期選択 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '1.1rem', 
-                  fontWeight: '600', 
-                  marginBottom: '10px', 
-                  color: '#333' 
-                }}>
-                  � 科目を選択
-                </label>
-                <select
-                  value={currentSubjectId}
-                  onChange={(e) => setCurrentSubjectId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '15px',
-                    border: '2px solid #e1e5e9',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                >
-                  {subjects.map(subject => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.subjectName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '1.1rem', 
-                  fontWeight: '600', 
-                  marginBottom: '10px', 
-                  color: '#333' 
-                }}>
-                  📅 評定を見る学期
-                </label>
-                <select
-                  value={viewSemester}
-                  onChange={(e) => setViewSemester(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '15px',
-                    border: '2px solid #e1e5e9',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">学期を選択してください</option>
-                  <option value="一学期">一学期</option>
-                  <option value="二学期">二学期</option>
-                  <option value="三学期">三学期</option>
-                  <option value="全学期">全学期</option>
-                </select>
-              </div>
+            <h2 style={{ margin: '0 0 25px 0', color: '#333', fontSize: '1.8rem', textAlign: 'center' }}>
+              📊 {currentSubject?.subjectName} の状況
+            </h2>
+            
+            {/* 学期選択 */}
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '1.1rem', 
+                fontWeight: '600', 
+                marginBottom: '10px', 
+                color: '#333' 
+              }}>
+                📅 評定を見る学期
+              </label>
+              <select
+                value={viewSemester}
+                onChange={(e) => setViewSemester(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  outline: 'none'
+                }}
+              >
+                <option value="">学期を選択してください</option>
+                <option value="一学期">一学期</option>
+                <option value="二学期">二学期</option>
+                <option value="三学期">三学期</option>
+              </select>
             </div>
 
             {/* 計算結果表示 */}
             {results ? (
               <>
-                <h3 style={{ color: '#333', marginBottom: '20px', fontSize: '1.5rem', textAlign: 'center' }}>
-                  🎨 {currentSubject.subjectName}の評定結果
-                </h3>
                 
                 {/* 評定カード */}
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '15px', 
-                  marginBottom: '25px',
-                  flexWrap: 'wrap'
-                }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginBottom: '25px' }}>
                   {/* 現在の評定 */}
                   <div style={{
-                    flex: '1',
-                    minWidth: '120px',
-                    backgroundColor: results.currentGrade >= formData.targetGrade ? '#e8f5e8' : '#fff3e0',
-                    border: `3px solid ${results.currentGrade >= formData.targetGrade ? '#4caf50' : '#ff9800'}`,
+                    textAlign: 'center',
+                    padding: '25px',
+                    backgroundColor: results.currentGrade >= currentSubject?.targetGrade ? '#e8f5e8' : '#fff3e0',
                     borderRadius: '15px',
-                    padding: '20px',
-                    textAlign: 'center'
+                    border: `3px solid ${results.currentGrade >= currentSubject?.targetGrade ? '#4CAF50' : '#FF9800'}`
                   }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '5px' }}>
+                    <div style={{ 
+                      fontSize: '3rem', 
+                      fontWeight: 'bold', 
+                      color: results.currentGrade >= currentSubject?.targetGrade ? '#4CAF50' : '#FF9800',
+                      marginBottom: '5px' 
+                    }}>
                       {results.currentGrade}
                     </div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#666' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', color: '#666', marginBottom: '5px' }}>
                       {viewSemester}評定
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#888' }}>
                       平均: {results.currentAverage}点
                     </div>
                   </div>
 
                   {/* 目標評定 */}
                   <div style={{
-                    flex: '1',
-                    minWidth: '120px',
+                    textAlign: 'center',
+                    padding: '25px',
                     backgroundColor: '#e3f2fd',
-                    border: '3px solid #2196f3',
                     borderRadius: '15px',
-                    padding: '20px',
-                    textAlign: 'center'
+                    border: '3px solid #2196F3'
                   }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '5px' }}>
-                      {formData.targetGrade}
+                    <div style={{ 
+                      fontSize: '3rem', 
+                      fontWeight: 'bold', 
+                      color: '#2196F3',
+                      marginBottom: '5px' 
+                    }}>
+                      {currentSubject?.targetGrade}
                     </div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#666' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', color: '#666', marginBottom: '5px' }}>
                       目標評定
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#888' }}>
                       必要: {results.targetAverage}点
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
                       {formData.targetGrade === 5 && '5 (85点以上)'}
                       {formData.targetGrade === 4 && '4 (70-84点)'}
                       {formData.targetGrade === 3 && '3 (55-69点)'}
@@ -674,21 +721,22 @@ const SubGradeCalculator: React.FC = () => {
 
                   {/* 達成状況 */}
                   <div style={{
-                    flex: '1',
-                    minWidth: '120px',
+                    textAlign: 'center',
+                    padding: '25px',
                     backgroundColor: results.isAchieved ? '#e8f5e8' : '#fce4ec',
-                    border: `3px solid ${results.isAchieved ? '#4caf50' : '#e91e63'}`,
                     borderRadius: '15px',
-                    padding: '20px',
-                    textAlign: 'center'
+                    border: `3px solid ${results.isAchieved ? '#4CAF50' : '#E91E63'}`
                   }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '5px' }}>
-                      {results.isAchieved ? '🎉' : '�'}
+                    <div style={{ 
+                      fontSize: '3rem', 
+                      marginBottom: '5px'
+                    }}>
+                      {results.isAchieved ? '🎉' : '💪'}
                     </div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#666' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', color: '#666', marginBottom: '5px' }}>
                       {results.isAchieved ? '達成済み！' : '頑張ろう！'}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#888' }}>
                       {results.isAchieved ? 'おめでとう！' : '次回頑張ろう'}
                     </div>
                   </div>
@@ -711,7 +759,7 @@ const SubGradeCalculator: React.FC = () => {
                   </div>
                   <div style={{ fontSize: '1.1rem', color: results.isAchieved ? '#2e7d32' : '#bf360c' }}>
                     {results.isAchieved 
-                      ? `素晴らしい！${viewSemester}で評定${formData.targetGrade}を達成しています！`
+                      ? `素晴らしい！${viewSemester}で評定${currentSubject?.targetGrade}を達成しています！`
                       : `${viewSemester}の次のテストで約${results.nextTestScore}点以上取れば目標達成です！`
                     }
                   </div>
@@ -741,6 +789,207 @@ const SubGradeCalculator: React.FC = () => {
                       <div>
                         次回: テスト{results.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* テスト履歴 */}
+                <div style={{ marginTop: '25px' }}>
+                  <h3 style={{ color: '#333', marginBottom: '15px' }}>📝 テスト履歴</h3>
+                  {currentSubject.currentTests.length === 0 ? (
+                    <div style={{
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '12px',
+                      padding: '30px',
+                      textAlign: 'center',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📋</div>
+                      <p style={{ color: '#666', fontSize: '1.1rem' }}>
+                        まだテストが登録されていません
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {viewSemester ? (
+                        // 特定の学期が選択されている場合、その学期のテストのみを表示
+                        (() => {
+                          const semesterTests = currentSubject.currentTests.filter(test => test.semester === viewSemester);
+                          if (semesterTests.length === 0) {
+                            return (
+                              <div style={{
+                                backgroundColor: '#f8f9fa',
+                                borderRadius: '12px',
+                                padding: '20px',
+                                border: '1px solid #e9ecef',
+                                textAlign: 'center'
+                              }}>
+                                <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📋</div>
+                                <h4 style={{ color: '#666', marginBottom: '10px' }}>
+                                  {viewSemester}のテストがありません
+                                </h4>
+                                <p style={{ color: '#888', fontSize: '0.9rem' }}>
+                                  上記フォームから{viewSemester}のテストを追加してください
+                                </p>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <div style={{
+                              backgroundColor: '#f8f9fa',
+                              borderRadius: '12px',
+                              padding: '20px',
+                              border: '1px solid #e9ecef'
+                            }}>
+                              <h4 style={{ 
+                                color: '#495057', 
+                                marginBottom: '15px',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}>
+                                📚 {viewSemester}
+                                <span style={{ 
+                                  fontSize: '12px', 
+                                  color: '#6c757d',
+                                  fontWeight: '400'
+                                }}>
+                                  ({semesterTests.length}件)
+                                </span>
+                              </h4>
+                              <div style={{ display: 'grid', gap: '10px' }}>
+                                {semesterTests.map(test => (
+                                  <div key={test.id} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '15px',
+                                    backgroundColor: 'white',
+                                    borderRadius: '8px',
+                                    border: '1px solid #dee2e6'
+                                  }}>
+                                    <span style={{ fontWeight: '500', color: '#333' }}>{test.name}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                      <span style={{ color: '#666' }}>
+                                        {test.score}/{test.maxScore}点 ({Math.round((test.score / test.maxScore) * 100)}%)
+                                        {test.participationScore !== undefined && (
+                                          <span style={{ marginLeft: '10px', fontSize: '0.9em' }}>
+                                            平常点: {test.participationScore}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm('このテストを削除しますか？')) {
+                                            const updated = subjects.map(subject => 
+                                              subject.id === currentSubject.id
+                                                ? { ...subject, currentTests: subject.currentTests.filter(t => t.id !== test.id) }
+                                                : subject
+                                            );
+                                            setSubjects(updated);
+                                          }
+                                        }}
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          fontSize: '16px',
+                                          cursor: 'pointer',
+                                          color: '#dc3545'
+                                        }}
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        // 学期が選択されていない場合、全学期のテストを学期別に表示
+                        ['一学期', '二学期', '三学期'].map(semester => {
+                          const semesterTests = currentSubject.currentTests.filter(test => test.semester === semester);
+                          if (semesterTests.length === 0) return null;
+                          
+                          return (
+                            <div key={semester} style={{
+                              backgroundColor: '#f8f9fa',
+                              borderRadius: '12px',
+                              padding: '20px',
+                              border: '1px solid #e9ecef'
+                            }}>
+                              <h4 style={{ 
+                                color: '#495057', 
+                                marginBottom: '15px',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}>
+                                📚 {semester}
+                                <span style={{ 
+                                  fontSize: '12px', 
+                                  color: '#6c757d',
+                                  fontWeight: '400'
+                                }}>
+                                  ({semesterTests.length}件)
+                                </span>
+                              </h4>
+                              <div style={{ display: 'grid', gap: '10px' }}>
+                                {semesterTests.map(test => (
+                                  <div key={test.id} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '15px',
+                                    backgroundColor: 'white',
+                                    borderRadius: '8px',
+                                    border: '1px solid #dee2e6'
+                                  }}>
+                                    <span style={{ fontWeight: '500', color: '#333' }}>{test.name}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                      <span style={{ color: '#666' }}>
+                                        {test.score}/{test.maxScore}点 ({Math.round((test.score / test.maxScore) * 100)}%)
+                                        {test.participationScore !== undefined && (
+                                          <span style={{ marginLeft: '10px', fontSize: '0.9em' }}>
+                                            平常点: {test.participationScore}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm('このテストを削除しますか？')) {
+                                            const updated = subjects.map(subject => 
+                                              subject.id === currentSubject.id
+                                                ? { ...subject, currentTests: subject.currentTests.filter(t => t.id !== test.id) }
+                                                : subject
+                                            );
+                                            setSubjects(updated);
+                                          }
+                                        }}
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          fontSize: '16px',
+                                          cursor: 'pointer',
+                                          color: '#dc3545'
+                                        }}
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   )}
                 </div>
