@@ -786,6 +786,70 @@ const GradeCalculator: React.FC = () => {
               </select>
             </div>
             
+
+            {/* 年間評定計算ボタン */}
+
+            {/* 年間評定計算結果表示 */}
+            {showYearlyResults && yearlyResults && yearlyResults.hasTests && (
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: '15px',
+                padding: '25px',
+                marginBottom: '25px',
+                border: '3px solid #007bff'
+              }}>
+                <h3 style={{
+                  textAlign: 'center',
+                  marginBottom: '20px',
+                  color: '#007bff',
+                  fontSize: '1.3rem'
+                }}>
+                  📊 年間評定計算（{yearlyResults.courseType === 'advanced' ? '進学コース' : '普通コース'}）
+                </h3>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '25px',
+                  backgroundColor: yearlyResults.isYearlyTargetAchieved ? '#e8f5e8' : '#fff3e0',
+                  borderRadius: '15px',
+                  border: `3px solid ${yearlyResults.isYearlyTargetAchieved ? '#4CAF50' : '#FF9800'}`,
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ 
+                    fontSize: '3.5rem', 
+                    fontWeight: 'bold', 
+                    color: yearlyResults.isYearlyTargetAchieved ? '#4CAF50' : '#FF9800',
+                    marginBottom: '10px' 
+                  }}>
+                    {yearlyResults.yearlyGrade}
+                  </div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
+                    現在の年間評定
+                  </div>
+                  <div style={{ fontSize: '1rem', color: '#888' }}>
+                    全テスト平均: {yearlyResults.yearlyAverage}点
+                  </div>
+                </div>
+              </div>
+            )}
+            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+              <button
+                onClick={() => setShowYearlyResults(!showYearlyResults)}
+                style={{
+                  padding: '15px 30px',
+                  backgroundColor: showYearlyResults ? '#6c757d' : '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(0,123,255,0.3)'
+                }}
+              >
+                📊 {showYearlyResults ? '年間評定を閉じる' : '年間評定を計算'}
+              </button>
+            </div>
             {/* 学期が選択されているかどうかをチェック */}
             {!viewSemester || viewSemester === '' ? (
               // 学期が選択されていない場合の案内
