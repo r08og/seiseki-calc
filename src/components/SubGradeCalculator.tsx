@@ -120,6 +120,65 @@ const SubGradeCalculator: React.FC = () => {
   };
 
   const currentSubject = subjects.find(s => s.id === currentSubjectId);
+
+  // 年間評定計算機能（技能科目用）
+  const calculateYearlyGrade = (subject: SubjectGrades) => {
+    const firstSemesterTests = subject.currentTests.filter(test => test.semester === '一学期');
+    const secondSemesterTests = subject.currentTests.filter(test => test.semester === '二学期');
+    
+    if (firstSemesterTests.length === 0 || secondSemesterTests.length === 0) {
+      return null;
+    }
+    
+    // 4つのテストすべてを同じ重みで扱う
+    const allTests = [...firstSemesterTests, ...secondSemesterTests];
+    
+    // 技能科目は統一85点基準
+    const SKILL_GRADING = {
+      grade5: { min: 85 },
+      grade4: { min: 70 },
+      grade3: { min: 55 },
+      grade2: { min: 40 },
+      grade1: { min: 0 }
+    };
+    
+    // 学期と同じ計算方式：重み付き平均を計算（テスト80% + 平常点20%）
+    const yearlyAverage = calculateWeightedAverage(allTests, [], subject.participationScore);
+    const yearlyGrade = calculateGradeFromAverage(yearlyAverage, SKILL_GRADING);
+    
+    // 年間目標評定に必要な点数を計算
+    const targetAverage = getRequiredAverageForGrade(subject.targetGrade, SKILL_GRADING);
+    const nextTestScore = calculateRequiredScoreForNextTest(
+      allTests,
+      subject.participationScore,
+      subject.targetGrade,
+      100,
+      subject.participationScore,
+      SKILL_GRADING
+    );
+    
+    // 各学期の平均も表示用に計算
+    const firstAvg = firstSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / firstSemesterTests.length;
+    const secondAvg = secondSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / secondSemesterTests.length;
+    
+    return {
+      firstSemesterAvg: Math.round(firstAvg * 10) / 10,
+      secondSemesterAvg: Math.round(secondAvg * 10) / 10,
+      yearlyAverage: Math.round(yearlyAverage * 10) / 10,
+      yearlyGrade,
+      targetAverage,
+      nextTestScore: Math.round(nextTestScore * 10) / 10,
+      isAchieved: yearlyGrade >= subject.targetGrade,
+      testCount: allTests.length
+    };
+  };
+
+  // 年間評定計算が可能かチェック
+  const canCalculateYearly = (subject: SubjectGrades) => {
+    const firstSemesterTests = subject.currentTests.filter(test => test.semester === '一学期');
+    const secondSemesterTests = subject.currentTests.filter(test => test.semester === '二学期');
+    return firstSemesterTests.length >= 2 && secondSemesterTests.length >= 2;
+  };
   
   // デバッグ用ログ
   React.useEffect(() => {
@@ -265,7 +324,7 @@ const SubGradeCalculator: React.FC = () => {
             🎯 評定計算機
           </h1>
           <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-            技能教科用・85点で評定5【年間評定ボタン追加予定】
+            技能教科用・85点で評定5
           </p>
         </div>
 
@@ -648,8 +707,205 @@ const SubGradeCalculator: React.FC = () => {
               </select>
             </div>
 
+            {/* 年間評定計算ボタン */}
+            {currentSubject && (
+              <div style={{ marginBottom: '25px' }}>
+                <button
+                  onClick={() => setViewSemester('yearly')}
+                  disabled={!canCalculateYearly(currentSubject)}
+                  style={{
+                    width: '100%',
+                    padding: '15px',
+                    backgroundColor: canCalculateYearly(currentSubject) ? '#4caf50' : '#ccc',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: canCalculateYearly(currentSubject) ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.3s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseOver={(e) => {
+                    if (canCalculateYearly(currentSubject)) {
+                      e.currentTarget.style.backgroundColor = '#45a049';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (canCalculateYearly(currentSubject)) {
+                      e.currentTarget.style.backgroundColor = '#4caf50';
+                    }
+                  }}
+                >
+                  🎓 年間評定を計算
+                  {!canCalculateYearly(currentSubject) && (
+                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                      (一学期・二学期各2テスト必要)
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
             {/* 計算結果表示 */}
-            {results && results.testCount > 0 ? (
+            {viewSemester === 'yearly' ? (
+              // 年間評定計算の表示
+              (() => {
+                const yearlyResult = calculateYearlyGrade(currentSubject!);
+                if (!yearlyResult) {
+                  return (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '40px',
+                      backgroundColor: '#fff3e0',
+                      borderRadius: '15px',
+                      border: '3px solid #ff9800',
+                      marginBottom: '25px'
+                    }}>
+                      <div style={{ fontSize: '4rem', marginBottom: '20px' }}>⚠️</div>
+                      <h3 style={{ color: '#f57c00', marginBottom: '15px', fontSize: '1.5rem' }}>
+                        年間評定を計算できません
+                      </h3>
+                      <p style={{ color: '#e65100', fontSize: '1.1rem', lineHeight: '1.4' }}>
+                        一学期と二学期の両方にテスト結果が必要です
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    <div style={{ 
+                      textAlign: 'center', 
+                      marginBottom: '20px',
+                      padding: '10px',
+                      backgroundColor: '#e8f5e8',
+                      borderRadius: '10px',
+                      border: '2px solid #4caf50'
+                    }}>
+                      <h3 style={{ color: '#2e7d32', margin: '0', fontSize: '1.3rem' }}>
+                        🎓 年間評定
+                      </h3>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+                      {/* 現在の評定 */}
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '25px',
+                        backgroundColor: yearlyResult.yearlyGrade >= currentSubject?.targetGrade ? '#e8f5e8' : '#fff3e0',
+                        borderRadius: '15px',
+                        border: `3px solid ${yearlyResult.yearlyGrade >= currentSubject?.targetGrade ? '#4CAF50' : '#FF9800'}`
+                      }}>
+                        <div style={{ 
+                          fontSize: '3rem', 
+                          fontWeight: 'bold', 
+                          color: yearlyResult.yearlyGrade >= currentSubject?.targetGrade ? '#4CAF50' : '#FF9800',
+                          marginBottom: '10px'
+                        }}>
+                          {yearlyResult.yearlyGrade}
+                        </div>
+                        <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>年間評定</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {yearlyResult.yearlyAverage}点</div>
+                      </div>
+                      
+                      {/* 目標評定 */}
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '25px',
+                        backgroundColor: '#f0f8ff',
+                        borderRadius: '15px',
+                        border: '3px solid #2196F3'
+                      }}>
+                        <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#2196F3', marginBottom: '10px' }}>
+                          {currentSubject?.targetGrade}
+                        </div>
+                        <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>目標評定</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>必要: {yearlyResult.targetAverage}点</div>
+                      </div>
+                      
+                      {/* 達成状況 */}
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '25px',
+                        backgroundColor: yearlyResult.isAchieved ? '#e8f5e8' : '#fce4ec',
+                        borderRadius: '15px',
+                        border: `3px solid ${yearlyResult.isAchieved ? '#4CAF50' : '#E91E63'}`
+                      }}>
+                        <div style={{ 
+                          fontSize: '3rem', 
+                          marginBottom: '5px'
+                        }}>
+                          {yearlyResult.isAchieved ? '🎉' : '💪'}
+                        </div>
+                        <div style={{ fontSize: '1rem', fontWeight: '600', color: '#666', marginBottom: '5px' }}>
+                          {yearlyResult.isAchieved ? '達成済み！' : '頑張ろう！'}
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>
+                          {yearlyResult.isAchieved ? 'おめでとう！' : '次回頑張ろう'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 詳細メッセージ */}
+                    <div style={{
+                      backgroundColor: yearlyResult.isAchieved ? '#e8f5e8' : '#fff3e0',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{ 
+                        fontSize: '1.2rem', 
+                        fontWeight: 'bold', 
+                        marginBottom: '8px',
+                        color: yearlyResult.isAchieved ? '#2e7d32' : '#f57c00'
+                      }}>
+                        {yearlyResult.isAchieved ? '🎯 年間目標達成！' : '📈 年間で頑張ろう！'}
+                      </div>
+                      <div style={{ fontSize: '1.1rem', color: yearlyResult.isAchieved ? '#2e7d32' : '#bf360c' }}>
+                        {yearlyResult.isAchieved 
+                          ? `素晴らしい！年間で評定${currentSubject?.targetGrade}を達成しています！`
+                          : `年間評定${currentSubject?.targetGrade}のためには、次のテストで約${yearlyResult.nextTestScore}点以上必要です！`
+                        }
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.95rem', 
+                        color: '#666', 
+                        marginTop: '8px',
+                        fontStyle: 'italic'
+                      }}>
+                        💡 4つのテスト（{yearlyResult.testCount}個完了）を同じ重みで計算、平常点{currentSubject?.participationScore}点を加算
+                      </div>
+
+                      {!yearlyResult.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '12px',
+                          backgroundColor: '#e8f5e8',
+                          borderRadius: '8px',
+                          fontSize: '0.9rem',
+                          color: '#2e7d32'
+                        }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>� おすすめの戦略:</div>
+                          <div>
+                            現在: 4テスト平均{yearlyResult.yearlyAverage}点 + 平常点{currentSubject.participationScore}点
+                          </div>
+                          <div>
+                            次回: テスト{yearlyResult.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                            💡 平常点を{currentSubject.participationScore}点と仮定した場合
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()
+            ) : results && results.testCount > 0 ? (
               <>
                 
                 {/* 評定カード */}
@@ -750,7 +1006,7 @@ const SubGradeCalculator: React.FC = () => {
                   <div style={{ fontSize: '1.1rem', color: results.isAchieved ? '#2e7d32' : '#bf360c' }}>
                     {results.isAchieved 
                       ? `素晴らしい！${viewSemester}で評定${currentSubject?.targetGrade}を達成しています！`
-                      : `${viewSemester}の次のテストで約${results.nextTestScore}点以上取れば目標達成です！`
+                      : `${viewSemester}の次のテストで約${results.nextTestScore}点以上必要です！`
                     }
                   </div>
                   {!results.isAchieved && (
@@ -778,6 +1034,9 @@ const SubGradeCalculator: React.FC = () => {
                       </div>
                       <div>
                         次回: テスト{results.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                        💡 平常点を{currentSubject.participationScore}点と仮定した場合
                       </div>
                     </div>
                   )}

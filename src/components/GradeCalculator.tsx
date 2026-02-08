@@ -316,6 +316,109 @@ const GradeCalculator: React.FC = () => {
 
   const currentSubject = subjects.find(s => s.id === currentSubjectId);
   
+  // 年間評定計算機能
+  const calculateYearlyGrade = (subject: SubjectGrades) => {
+    const firstSemesterTests = subject.currentTests.filter(test => test.semester === '一学期');
+    const secondSemesterTests = subject.currentTests.filter(test => test.semester === '二学期');
+    
+    if (firstSemesterTests.length === 0 || secondSemesterTests.length === 0) {
+      return null;
+    }
+    
+    // ユーザーのコース情報を取得
+    const currentUser = getCurrentUser();
+    const userCourseType = currentUser?.courseType || 'advanced';
+    
+    // 各学期の評点を正しい方式で計算
+    const firstSemesterResult = getResults(subject, '一学期', userCourseType);
+    const secondSemesterResult = getResults(subject, '二学期', userCourseType);
+    
+    if (!firstSemesterResult || !secondSemesterResult) {
+      return null;
+    }
+    
+    // 各学期の評点（重み付き平均）を取得
+    const firstSemesterPoints = firstSemesterResult.currentAverage;  // テスト80% + 平常点20%
+    const secondSemesterPoints = secondSemesterResult.currentAverage; // テスト80% + 平常点20%
+    
+    // 年間目標評定に必要な総合点を計算
+    // 進学コース: 評定5=80点×3学期=240点、評定4=65点×3学期=195点...
+    // 普通コース: 評定5=85点×3学期=255点、評定4=70点×3学期=210点...
+    let targetPointsPerSemester;
+    if (subject.targetGrade === 5) {
+      targetPointsPerSemester = userCourseType === 'advanced' ? 80 : 85; // 評定5の基準点
+    } else if (subject.targetGrade === 4) {
+      targetPointsPerSemester = userCourseType === 'advanced' ? 65 : 70; // 評定4の基準点
+    } else if (subject.targetGrade === 3) {
+      targetPointsPerSemester = userCourseType === 'advanced' ? 50 : 55; // 評定3の基準点
+    } else if (subject.targetGrade === 2) {
+      targetPointsPerSemester = 40; // 評定2の基準点
+    } else {
+      targetPointsPerSemester = 0; // 評定1の基準点
+    }
+    
+    const targetTotalPoints = targetPointsPerSemester * 3; // 3学期分の合計点
+    
+    // 三学期に必要な点数
+    const thirdSemesterNeededPoints = targetTotalPoints - firstSemesterPoints - secondSemesterPoints;
+    
+    // 三学期に必要な評定を計算（評定基準に基づく）
+    let thirdSemesterNeededGrade;
+    if (userCourseType === 'advanced') {
+      // 進学コースの基準
+      if (thirdSemesterNeededPoints >= 80) thirdSemesterNeededGrade = 5;
+      else if (thirdSemesterNeededPoints >= 65) thirdSemesterNeededGrade = 4;
+      else if (thirdSemesterNeededPoints >= 50) thirdSemesterNeededGrade = 3;
+      else if (thirdSemesterNeededPoints >= 40) thirdSemesterNeededGrade = 2;
+      else thirdSemesterNeededGrade = 1;
+    } else {
+      // 普通コースの基準
+      if (thirdSemesterNeededPoints >= 85) thirdSemesterNeededGrade = 5;
+      else if (thirdSemesterNeededPoints >= 70) thirdSemesterNeededGrade = 4;
+      else if (thirdSemesterNeededPoints >= 55) thirdSemesterNeededGrade = 3;
+      else if (thirdSemesterNeededPoints >= 40) thirdSemesterNeededGrade = 2;
+      else thirdSemesterNeededGrade = 1;
+    }
+    
+    // 現在の年間評定を計算（2学期分の平均）
+    const currentYearlyAverage = (firstSemesterPoints + secondSemesterPoints) / 2;
+    let currentYearlyGrade;
+    if (userCourseType === 'advanced') {
+      if (currentYearlyAverage >= 80) currentYearlyGrade = 5;
+      else if (currentYearlyAverage >= 65) currentYearlyGrade = 4;
+      else if (currentYearlyAverage >= 50) currentYearlyGrade = 3;
+      else if (currentYearlyAverage >= 40) currentYearlyGrade = 2;
+      else currentYearlyGrade = 1;
+    } else {
+      if (currentYearlyAverage >= 85) currentYearlyGrade = 5;
+      else if (currentYearlyAverage >= 70) currentYearlyGrade = 4;
+      else if (currentYearlyAverage >= 55) currentYearlyGrade = 3;
+      else if (currentYearlyAverage >= 40) currentYearlyGrade = 2;
+      else currentYearlyGrade = 1;
+    }
+    
+    return {
+      firstSemesterAvg: Math.round(firstSemesterPoints * 10) / 10,
+      secondSemesterAvg: Math.round(secondSemesterPoints * 10) / 10,
+      firstSemesterGrade: firstSemesterResult.currentGrade,
+      secondSemesterGrade: secondSemesterResult.currentGrade,
+      yearlyGrade: currentYearlyGrade,
+      targetTotalPoints,
+      thirdSemesterNeededPoints: Math.max(0, thirdSemesterNeededPoints),
+      thirdSemesterNeededGrade: Math.max(1, Math.min(5, thirdSemesterNeededGrade)),
+      thirdSemesterTargetAverage: Math.max(0, thirdSemesterNeededPoints),
+      isAchieved: currentYearlyGrade >= subject.targetGrade,
+      testCount: firstSemesterTests.length + secondSemesterTests.length
+    };
+  };
+
+  // 年間評定計算が可能かチェック
+  const canCalculateYearly = (subject: SubjectGrades) => {
+    const firstSemesterTests = subject.currentTests.filter(test => test.semester === '一学期');
+    const secondSemesterTests = subject.currentTests.filter(test => test.semester === '二学期');
+    return firstSemesterTests.length >= 2 && secondSemesterTests.length >= 2;
+  };
+  
   // 結果を計算 - 評定表示用の学期選択を使用
   const results = React.useMemo(() => {
     if (!currentSubject) return null;
@@ -786,6 +889,49 @@ const GradeCalculator: React.FC = () => {
               </select>
             </div>
             
+            {/* 年間評定計算ボタン */}
+            {currentSubject && (
+              <div style={{ marginBottom: '25px' }}>
+                <button
+                  onClick={() => setViewSemester('yearly')}
+                  disabled={!canCalculateYearly(currentSubject)}
+                  style={{
+                    width: '100%',
+                    padding: '15px',
+                    backgroundColor: canCalculateYearly(currentSubject) ? '#4caf50' : '#ccc',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: canCalculateYearly(currentSubject) ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.3s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseOver={(e) => {
+                    if (canCalculateYearly(currentSubject)) {
+                      e.currentTarget.style.backgroundColor = '#45a049';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (canCalculateYearly(currentSubject)) {
+                      e.currentTarget.style.backgroundColor = '#4caf50';
+                    }
+                  }}
+                >
+                  🎓 年間評定を計算
+                  {!canCalculateYearly(currentSubject) && (
+                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                      (一学期・二学期各2テスト必要)
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+            
             {/* 学期が選択されているかどうかをチェック */}
             {!viewSemester || viewSemester === '' ? (
               // 学期が選択されていない場合の案内
@@ -816,6 +962,184 @@ const GradeCalculator: React.FC = () => {
                   💡 ヒント: 学期ごとに別々の評定が計算されます
                 </div>
               </div>
+            ) : viewSemester === 'yearly' ? (
+              // 年間評定計算の表示
+              (() => {
+                const yearlyResult = calculateYearlyGrade(currentSubject!);
+                if (!yearlyResult) {
+                  return (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '40px',
+                      backgroundColor: '#fff3e0',
+                      borderRadius: '15px',
+                      border: '3px solid #ff9800',
+                      marginBottom: '25px'
+                    }}>
+                      <div style={{ fontSize: '4rem', marginBottom: '20px' }}>⚠️</div>
+                      <h3 style={{ color: '#f57c00', marginBottom: '15px', fontSize: '1.5rem' }}>
+                        年間評定を計算できません
+                      </h3>
+                      <p style={{ color: '#e65100', fontSize: '1.1rem', lineHeight: '1.4' }}>
+                        一学期と二学期の両方にテスト結果が必要です
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    <div style={{ 
+                      textAlign: 'center', 
+                      marginBottom: '20px',
+                      padding: '10px',
+                      backgroundColor: '#e8f5e8',
+                      borderRadius: '10px',
+                      border: '2px solid #4caf50'
+                    }}>
+                      <h3 style={{ color: '#2e7d32', margin: '0', fontSize: '1.3rem' }}>
+                        🎓 年間評定計算
+                      </h3>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+                      {/* 一学期評定 */}
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '25px',
+                        backgroundColor: '#f0f8ff',
+                        borderRadius: '15px',
+                        border: '3px solid #2196F3'
+                      }}>
+                        <div style={{ 
+                          fontSize: '3rem', 
+                          fontWeight: 'bold', 
+                          color: '#2196F3',
+                          marginBottom: '10px'
+                        }}>
+                          {yearlyResult.firstSemesterGrade}
+                        </div>
+                        <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>一学期評定</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {yearlyResult.firstSemesterAvg}点</div>
+                      </div>
+                      
+                      {/* 二学期評定 */}
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '25px',
+                        backgroundColor: '#f0f8ff',
+                        borderRadius: '15px',
+                        border: '3px solid #2196F3'
+                      }}>
+                        <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#2196F3', marginBottom: '10px' }}>
+                          {yearlyResult.secondSemesterGrade}
+                        </div>
+                        <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>二学期評定</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {yearlyResult.secondSemesterAvg}点</div>
+                      </div>
+                      
+                      {/* 三学期に必要な評定 */}
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '25px',
+                        backgroundColor: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#fff3e0' : '#fce4ec',
+                        borderRadius: '15px',
+                        border: `3px solid ${yearlyResult.thirdSemesterNeededGrade <= 5 ? '#FF9800' : '#E91E63'}`
+                      }}>
+                        <div style={{ 
+                          fontSize: '3rem', 
+                          fontWeight: 'bold',
+                          color: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#FF9800' : '#E91E63',
+                          marginBottom: '10px'
+                        }}>
+                          {yearlyResult.thirdSemesterNeededGrade}
+                        </div>
+                        <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>
+                          三学期必要評定
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>
+                          {yearlyResult.thirdSemesterNeededGrade <= 5 ? '達成可能' : '達成困難'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 詳細メッセージ */}
+                    <div style={{
+                      backgroundColor: yearlyResult.isAchieved ? '#e8f5e8' : '#fff3e0',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{ 
+                        fontSize: '1.2rem', 
+                        fontWeight: 'bold', 
+                        marginBottom: '15px',
+                        color: '#333',
+                        textAlign: 'center'
+                      }}>
+                        📊 年間評定{currentSubject?.targetGrade}達成のための計算
+                      </div>
+                      
+                      <div style={{ 
+                        display: 'grid', 
+                        gap: '10px',
+                        fontSize: '1rem',
+                        color: '#555',
+                        marginBottom: '15px'
+                      }}>
+                        <div>🎯 <strong>目標:</strong> 年間評定{currentSubject?.targetGrade} → 必要総合点 {yearlyResult.targetTotalPoints}点</div>
+                        <div>📈 <strong>一学期:</strong> 評定{yearlyResult.firstSemesterGrade} → {Math.round(yearlyResult.firstSemesterAvg)}点</div>
+                        <div>📈 <strong>二学期:</strong> 評定{yearlyResult.secondSemesterGrade} → {Math.round(yearlyResult.secondSemesterAvg)}点</div>
+                        <div style={{ 
+                          borderTop: '2px solid #ddd',
+                          paddingTop: '10px',
+                          fontSize: '1.1rem',
+                          fontWeight: 'bold',
+                          color: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#f57c00' : '#d32f2f'
+                        }}>
+                          🎯 <strong>三学期必要:</strong> {Math.round(yearlyResult.thirdSemesterNeededPoints)}点 → 評定{yearlyResult.thirdSemesterNeededGrade}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '1.1rem', color: yearlyResult.isAchieved ? '#2e7d32' : '#bf360c' }}>
+                        {yearlyResult.isAchieved 
+                          ? `素晴らしい！年間で評定${currentSubject?.targetGrade}を達成しています！`
+                          : `年間評定${currentSubject?.targetGrade}のためには、次のテストで約${yearlyResult.nextTestScore}点以上必要です！`
+                        }
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.95rem', 
+                        color: '#666', 
+                        marginTop: '8px',
+                        fontStyle: 'italic'
+                      }}>
+                        💡 4つのテスト（{yearlyResult.testCount}個完了）を同じ重みで計算、平常点{currentSubject?.participationScore}点を加算
+                      </div>
+
+                      {!yearlyResult.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '12px',
+                          backgroundColor: '#e8f5e8',
+                          borderRadius: '8px',
+                          fontSize: '0.9rem',
+                          color: '#2e7d32'
+                        }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>� おすすめの戦略:</div>
+                          <div>
+                            現在: 4テスト平均{yearlyResult.yearlyAverage}点 + 平常点{currentSubject.participationScore}点
+                          </div>
+                          <div>
+                            次回: テスト{yearlyResult.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                            💡 平常点を{currentSubject.participationScore}点と仮定した場合
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()
             ) : (
               // 学期が選択されている場合の評定表示
               // 特定の学期が選択されている場合、その学期の評定のみ表示
@@ -948,7 +1272,7 @@ const GradeCalculator: React.FC = () => {
                           <div style={{ fontSize: '1.1rem', color: finalResults.isAchieved ? '#2e7d32' : '#bf360c' }}>
                             {finalResults.isAchieved 
                               ? `素晴らしい！${viewSemester}で評定${currentSubject?.targetGrade}を達成しています！`
-                              : `${viewSemester}の次のテストで約${finalResults.nextTestScore}点以上取れば目標達成です！`
+                              : `${viewSemester}の次のテストで約${finalResults.nextTestScore}点以上必要です！`
                             }
                           </div>
                           {!finalResults.isAchieved && (
@@ -961,6 +1285,38 @@ const GradeCalculator: React.FC = () => {
                               💡 平常点を{currentSubject.participationScore}点と仮定した場合
                             </div>
                           )}
+
+                          {/* 現在の評定を維持するために必要な点数 */}
+                          {finalResults.currentGrade > 1 && (
+                            <div style={{
+                              marginTop: '15px',
+                              padding: '15px',
+                              backgroundColor: '#e3f2fd',
+                              borderRadius: '10px',
+                              border: '2px solid #2196F3'
+                            }}>
+                              <div style={{ 
+                                fontSize: '1.1rem', 
+                                fontWeight: 'bold', 
+                                marginBottom: '8px',
+                                color: '#1976d2'
+                              }}>
+                                🛡️ 現在の評定{finalResults.currentGrade}を維持するには
+                              </div>
+                              <div style={{ fontSize: '1rem', color: '#1565c0' }}>
+                                次のテストで約{finalResults.keepGradeScore}点以上必要です
+                              </div>
+                              <div style={{ 
+                                fontSize: '0.9rem', 
+                                color: '#666', 
+                                marginTop: '5px',
+                                fontStyle: 'italic'
+                              }}>
+                                💡 平常点を{currentSubject.participationScore}点と仮定した場合
+                              </div>
+                            </div>
+                          )}
+
                           {!finalResults.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
                             <div style={{
                               marginTop: '12px',
@@ -976,6 +1332,9 @@ const GradeCalculator: React.FC = () => {
                               </div>
                               <div>
                                 次回: テスト{finalResults.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                              </div>
+                              <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                                💡 平常点を{currentSubject.participationScore}点と仮定した場合
                               </div>
                             </div>
                           )}
