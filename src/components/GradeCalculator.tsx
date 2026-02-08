@@ -329,7 +329,7 @@ const GradeCalculator: React.FC = () => {
     const currentUser = getCurrentUser();
     const userCourseType = currentUser?.courseType || 'advanced';
     
-    // 各学期の評点を正しい方式で計算
+    // 各学期の評点を正しい方式で計算（テスト80% + 平常点20%の学期平均を取得）
     const firstSemesterResult = getResults(subject, '一学期', userCourseType);
     const secondSemesterResult = getResults(subject, '二学期', userCourseType);
     
@@ -337,76 +337,58 @@ const GradeCalculator: React.FC = () => {
       return null;
     }
     
-    // 各学期の評点（重み付き平均）を取得
-    const firstSemesterPoints = firstSemesterResult.currentAverage;  // テスト80% + 平常点20%
-    const secondSemesterPoints = secondSemesterResult.currentAverage; // テスト80% + 平常点20%
+    // 学期平均を取得（既にテスト80% + 平常点20%で計算済み）
+    const firstSemesterAvg = firstSemesterResult.currentAverage;   // 一学期平均
+    const secondSemesterAvg = secondSemesterResult.currentAverage; // 二学期平均
     
-    // 年間目標評定に必要な総合点を計算
-    // 進学コース: 評定5=80点×3学期=240点、評定4=65点×3学期=195点...
-    // 普通コース: 評定5=85点×3学期=255点、評定4=70点×3学期=210点...
-    let targetPointsPerSemester;
-    if (subject.targetGrade === 5) {
-      targetPointsPerSemester = userCourseType === 'advanced' ? 80 : 85; // 評定5の基準点
-    } else if (subject.targetGrade === 4) {
-      targetPointsPerSemester = userCourseType === 'advanced' ? 65 : 70; // 評定4の基準点
-    } else if (subject.targetGrade === 3) {
-      targetPointsPerSemester = userCourseType === 'advanced' ? 50 : 55; // 評定3の基準点
-    } else if (subject.targetGrade === 2) {
-      targetPointsPerSemester = 40; // 評定2の基準点
-    } else {
-      targetPointsPerSemester = 0; // 評定1の基準点
-    }
+    // 💡 正しい年間評定の計算式：(一学期平均 × 40% + 二学期平均 × 60%) × 80% + 平常点
+    const weightedAverage = (firstSemesterAvg * 0.4 + secondSemesterAvg * 0.6) * 0.8 + subject.participationScore;
     
-    const targetTotalPoints = targetPointsPerSemester * 3; // 3学期分の合計点
-    
-    // 三学期に必要な点数
-    const thirdSemesterNeededPoints = targetTotalPoints - firstSemesterPoints - secondSemesterPoints;
-    
-    // 三学期に必要な評定を計算（評定基準に基づく）
-    let thirdSemesterNeededGrade;
-    if (userCourseType === 'advanced') {
-      // 進学コースの基準
-      if (thirdSemesterNeededPoints >= 80) thirdSemesterNeededGrade = 5;
-      else if (thirdSemesterNeededPoints >= 65) thirdSemesterNeededGrade = 4;
-      else if (thirdSemesterNeededPoints >= 50) thirdSemesterNeededGrade = 3;
-      else if (thirdSemesterNeededPoints >= 40) thirdSemesterNeededGrade = 2;
-      else thirdSemesterNeededGrade = 1;
-    } else {
-      // 普通コースの基準
-      if (thirdSemesterNeededPoints >= 85) thirdSemesterNeededGrade = 5;
-      else if (thirdSemesterNeededPoints >= 70) thirdSemesterNeededGrade = 4;
-      else if (thirdSemesterNeededPoints >= 55) thirdSemesterNeededGrade = 3;
-      else if (thirdSemesterNeededPoints >= 40) thirdSemesterNeededGrade = 2;
-      else thirdSemesterNeededGrade = 1;
-    }
-    
-    // 現在の年間評定を計算（2学期分の平均）
-    const currentYearlyAverage = (firstSemesterPoints + secondSemesterPoints) / 2;
+    // 年間評定を計算
+    const gradeRange = userCourseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING;
     let currentYearlyGrade;
-    if (userCourseType === 'advanced') {
-      if (currentYearlyAverage >= 80) currentYearlyGrade = 5;
-      else if (currentYearlyAverage >= 65) currentYearlyGrade = 4;
-      else if (currentYearlyAverage >= 50) currentYearlyGrade = 3;
-      else if (currentYearlyAverage >= 40) currentYearlyGrade = 2;
-      else currentYearlyGrade = 1;
+    if (weightedAverage >= gradeRange[5].min) currentYearlyGrade = 5;
+    else if (weightedAverage >= gradeRange[4].min) currentYearlyGrade = 4;
+    else if (weightedAverage >= gradeRange[3].min) currentYearlyGrade = 3;
+    else if (weightedAverage >= gradeRange[2].min) currentYearlyGrade = 2;
+    else currentYearlyGrade = 1;
+    
+    // 目標評定に必要な年間平均点を計算
+    const targetYearlyAverage = getRequiredAverageForGrade(subject.targetGrade, gradeRange);
+    
+    // 三学期に必要な平均点を逆算
+    // 目標式: (一学期平均 × 40% + 二学期平均 × 60% + 三学期平均 × 0%) × 80% + 平常点 = 目標年間平均
+    // 現在の重み付き平均: (一学期平均 × 40% + 二学期平均 × 60%) × 80% + 平常点
+    // 三学期では重みが変わるため、三学期の評定目標を計算
+    const currentContribution = weightedAverage;
+    const targetContribution = targetYearlyAverage;
+    const shortfall = Math.max(0, targetContribution - currentContribution);
+    
+    // 三学期に必要な評定を計算
+    let thirdSemesterNeededGrade;
+    if (shortfall <= 0) {
+      thirdSemesterNeededGrade = 1; // 既に達成
+    } else if (shortfall <= 5) {
+      thirdSemesterNeededGrade = 2;
+    } else if (shortfall <= 15) {
+      thirdSemesterNeededGrade = 3;
+    } else if (shortfall <= 25) {
+      thirdSemesterNeededGrade = 4;
     } else {
-      if (currentYearlyAverage >= 85) currentYearlyGrade = 5;
-      else if (currentYearlyAverage >= 70) currentYearlyGrade = 4;
-      else if (currentYearlyAverage >= 55) currentYearlyGrade = 3;
-      else if (currentYearlyAverage >= 40) currentYearlyGrade = 2;
-      else currentYearlyGrade = 1;
+      thirdSemesterNeededGrade = 5;
     }
     
     return {
-      firstSemesterAvg: Math.round(firstSemesterPoints * 10) / 10,
-      secondSemesterAvg: Math.round(secondSemesterPoints * 10) / 10,
+      firstSemesterAvg: Math.round(firstSemesterAvg * 10) / 10,
+      secondSemesterAvg: Math.round(secondSemesterAvg * 10) / 10,
       firstSemesterGrade: firstSemesterResult.currentGrade,
       secondSemesterGrade: secondSemesterResult.currentGrade,
       yearlyGrade: currentYearlyGrade,
-      targetTotalPoints,
-      thirdSemesterNeededPoints: Math.max(0, thirdSemesterNeededPoints),
+      yearlyAverage: Math.round(weightedAverage * 10) / 10,
+      targetYearlyAverage: targetYearlyAverage,
+      shortfall: Math.round(shortfall * 10) / 10,
       thirdSemesterNeededGrade: Math.max(1, Math.min(5, thirdSemesterNeededGrade)),
-      thirdSemesterTargetAverage: Math.max(0, thirdSemesterNeededPoints),
+      thirdSemesterNeededPoints: Math.max(0, shortfall),
       isAchieved: currentYearlyGrade >= subject.targetGrade,
       testCount: firstSemesterTests.length + secondSemesterTests.length
     };
@@ -1087,9 +1069,10 @@ const GradeCalculator: React.FC = () => {
                         color: '#555',
                         marginBottom: '15px'
                       }}>
-                        <div>🎯 <strong>目標:</strong> 年間評定{currentSubject?.targetGrade} → 必要総合点 {yearlyResult.targetTotalPoints}点</div>
-                        <div>📈 <strong>一学期:</strong> 評定{yearlyResult.firstSemesterGrade} → {Math.round(yearlyResult.firstSemesterAvg)}点</div>
-                        <div>📈 <strong>二学期:</strong> 評定{yearlyResult.secondSemesterGrade} → {Math.round(yearlyResult.secondSemesterAvg)}点</div>
+                        <div>🎯 <strong>目標:</strong> 年間評定{currentSubject?.targetGrade} → 必要平均 {yearlyResult.targetYearlyAverage}点</div>
+                        <div>📈 <strong>一学期(40%):</strong> 評定{yearlyResult.firstSemesterGrade} → {Math.round(yearlyResult.firstSemesterAvg)}点</div>
+                        <div>📈 <strong>二学期(60%):</strong> 評定{yearlyResult.secondSemesterGrade} → {Math.round(yearlyResult.secondSemesterAvg)}点</div>
+                        <div>📊 <strong>現在の年間平均:</strong> {yearlyResult.yearlyAverage}点</div>
                         <div style={{ 
                           borderTop: '2px solid #ddd',
                           paddingTop: '10px',
@@ -1097,13 +1080,13 @@ const GradeCalculator: React.FC = () => {
                           fontWeight: 'bold',
                           color: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#f57c00' : '#d32f2f'
                         }}>
-                          🎯 <strong>三学期必要:</strong> {Math.round(yearlyResult.thirdSemesterNeededPoints)}点 → 評定{yearlyResult.thirdSemesterNeededGrade}
+                          🎯 <strong>不足:</strong> {Math.round(yearlyResult.shortfall)}点 → 三学期評定{yearlyResult.thirdSemesterNeededGrade}が必要
                         </div>
                       </div>
                       <div style={{ fontSize: '1.1rem', color: yearlyResult.isAchieved ? '#2e7d32' : '#bf360c' }}>
                         {yearlyResult.isAchieved 
                           ? `素晴らしい！年間で評定${currentSubject?.targetGrade}を達成しています！`
-                          : `年間評定${currentSubject?.targetGrade}のためには、次のテストで約${yearlyResult.nextTestScore}点以上必要です！`
+                          : `年間評定${currentSubject?.targetGrade}のためには、あと${yearlyResult.shortfall}点必要です！`
                         }
                       </div>
                       <div style={{ 
@@ -1112,7 +1095,7 @@ const GradeCalculator: React.FC = () => {
                         marginTop: '8px',
                         fontStyle: 'italic'
                       }}>
-                        💡 4つのテスト（{yearlyResult.testCount}個完了）を同じ重みで計算、平常点{currentSubject?.participationScore}点を加算
+                        💡 計算式：(一学期平均 × 40% + 二学期平均 × 60%) × 80% + 平常点{currentSubject?.participationScore}点
                       </div>
 
                       {!yearlyResult.isAchieved && currentSubject && currentSubject.currentTests.length > 0 && (
