@@ -329,7 +329,16 @@ const GradeCalculator: React.FC = () => {
     const currentUser = getCurrentUser();
     const userCourseType = currentUser?.courseType || 'advanced';
     
-    // 各学期の評点を正しい方式で計算（テスト80% + 平常点20%の学期平均を取得）
+    // 💡 正しい年間評定計算：評点から引く方式
+    // 1. 各学期のテスト平均を計算
+    const firstSemesterTestAvg = firstSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / firstSemesterTests.length;
+    const secondSemesterTestAvg = secondSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / secondSemesterTests.length;
+    
+    // 2. 各学期の評点を計算：テスト平均 × 0.8 + 平常点
+    const firstSemesterPoint = firstSemesterTestAvg * 0.8 + subject.participationScore;
+    const secondSemesterPoint = secondSemesterTestAvg * 0.8 + subject.participationScore;
+    
+    // 各学期の評定も計算（表示用）
     const firstSemesterResult = getResults(subject, '一学期', userCourseType);
     const secondSemesterResult = getResults(subject, '二学期', userCourseType);
     
@@ -337,59 +346,39 @@ const GradeCalculator: React.FC = () => {
       return null;
     }
     
-    // 学期平均を取得（既にテスト80% + 平常点20%で計算済み）
-    const firstSemesterAvg = firstSemesterResult.currentAverage;   // 一学期平均
-    const secondSemesterAvg = secondSemesterResult.currentAverage; // 二学期平均
+    // 3. 目標評定に必要な総評点を計算
+    const targetPoints = subject.targetGrade * 80; // 評定5なら400点、評定4なら320点など
     
-    // 💡 正しい年間評定の計算式：(一学期平均 × 40% + 二学期平均 × 60%) × 80% + 平常点
-    const weightedAverage = (firstSemesterAvg * 0.4 + secondSemesterAvg * 0.6) * 0.8 + subject.participationScore;
+    // 4. 一学期と二学期の評点を目標から引く
+    const usedPoints = firstSemesterPoint + secondSemesterPoint;
+    const remainingPoints = targetPoints - usedPoints;
     
-    // 年間評定を計算
-    const gradeRange = userCourseType === 'advanced' ? ADVANCED_COURSE_GRADING : REGULAR_COURSE_GRADING;
-    let currentYearlyGrade;
-    if (weightedAverage >= gradeRange[5].min) currentYearlyGrade = 5;
-    else if (weightedAverage >= gradeRange[4].min) currentYearlyGrade = 4;
-    else if (weightedAverage >= gradeRange[3].min) currentYearlyGrade = 3;
-    else if (weightedAverage >= gradeRange[2].min) currentYearlyGrade = 2;
-    else currentYearlyGrade = 1;
+    // 5. 三学期に必要な評点（テスト × 0.8 + 平常点）
+    const thirdSemesterNeededPoint = Math.max(0, remainingPoints);
     
-    // 目標評定に必要な年間平均点を計算
-    const targetYearlyAverage = getRequiredAverageForGrade(subject.targetGrade, gradeRange);
+    // 6. 三学期のテストで必要な点数を逆算
+    // 必要評点 = テスト点数 × 0.8 + 平常点
+    // テスト点数 = (必要評点 - 平常点) ÷ 0.8
+    const thirdSemesterNeededTestScore = Math.max(0, (thirdSemesterNeededPoint - subject.participationScore) / 0.8);
     
-    // 三学期に必要な平均点を逆算
-    // 目標式: (一学期平均 × 40% + 二学期平均 × 60% + 三学期平均 × 0%) × 80% + 平常点 = 目標年間平均
-    // 現在の重み付き平均: (一学期平均 × 40% + 二学期平均 × 60%) × 80% + 平常点
-    // 三学期では重みが変わるため、三学期の評定目標を計算
-    const currentContribution = weightedAverage;
-    const targetContribution = targetYearlyAverage;
-    const shortfall = Math.max(0, targetContribution - currentContribution);
-    
-    // 三学期に必要な評定を計算
-    let thirdSemesterNeededGrade;
-    if (shortfall <= 0) {
-      thirdSemesterNeededGrade = 1; // 既に達成
-    } else if (shortfall <= 5) {
-      thirdSemesterNeededGrade = 2;
-    } else if (shortfall <= 15) {
-      thirdSemesterNeededGrade = 3;
-    } else if (shortfall <= 25) {
-      thirdSemesterNeededGrade = 4;
-    } else {
-      thirdSemesterNeededGrade = 5;
-    }
+    // 7. 現在の年間評定を計算
+    const currentYearlyPoints = firstSemesterPoint + secondSemesterPoint;
+    const currentYearlyGrade = Math.floor(currentYearlyPoints / 80); // 240点なら3、320点なら4
     
     return {
-      firstSemesterAvg: Math.round(firstSemesterAvg * 10) / 10,
-      secondSemesterAvg: Math.round(secondSemesterAvg * 10) / 10,
+      firstSemesterAvg: Math.round(firstSemesterTestAvg * 10) / 10,
+      secondSemesterAvg: Math.round(secondSemesterTestAvg * 10) / 10,
       firstSemesterGrade: firstSemesterResult.currentGrade,
       secondSemesterGrade: secondSemesterResult.currentGrade,
-      yearlyGrade: currentYearlyGrade,
-      yearlyAverage: Math.round(weightedAverage * 10) / 10,
-      targetYearlyAverage: targetYearlyAverage,
-      shortfall: Math.round(shortfall * 10) / 10,
-      thirdSemesterNeededGrade: Math.max(1, Math.min(5, thirdSemesterNeededGrade)),
-      thirdSemesterNeededPoints: Math.max(0, shortfall),
-      isAchieved: currentYearlyGrade >= subject.targetGrade,
+      firstSemesterPoint: Math.round(firstSemesterPoint * 10) / 10,
+      secondSemesterPoint: Math.round(secondSemesterPoint * 10) / 10,
+      yearlyGrade: Math.max(1, Math.min(5, currentYearlyGrade)),
+      targetPoints: targetPoints,
+      usedPoints: Math.round(usedPoints * 10) / 10,
+      remainingPoints: Math.round(remainingPoints * 10) / 10,
+      thirdSemesterNeededPoint: Math.round(thirdSemesterNeededPoint * 10) / 10,
+      thirdSemesterNeededTestScore: Math.round(thirdSemesterNeededTestScore * 10) / 10,
+      isAchieved: remainingPoints <= 0,
       testCount: firstSemesterTests.length + secondSemesterTests.length
     };
   };
@@ -1002,7 +991,7 @@ const GradeCalculator: React.FC = () => {
                           {yearlyResult.firstSemesterGrade}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>一学期評定</div>
-                        <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {yearlyResult.firstSemesterAvg}点</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>評点: {yearlyResult.firstSemesterPoint}点</div>
                       </div>
                       
                       {/* 二学期評定 */}
@@ -1017,30 +1006,30 @@ const GradeCalculator: React.FC = () => {
                           {yearlyResult.secondSemesterGrade}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>二学期評定</div>
-                        <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {yearlyResult.secondSemesterAvg}点</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>評点: {yearlyResult.secondSemesterPoint}点</div>
                       </div>
                       
-                      {/* 三学期に必要な評定 */}
+                      {/* 三学期に必要な点数 */}
                       <div style={{
                         textAlign: 'center',
                         padding: '25px',
-                        backgroundColor: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#fff3e0' : '#fce4ec',
+                        backgroundColor: yearlyResult.thirdSemesterNeededTestScore <= 100 ? '#fff3e0' : '#fce4ec',
                         borderRadius: '15px',
-                        border: `3px solid ${yearlyResult.thirdSemesterNeededGrade <= 5 ? '#FF9800' : '#E91E63'}`
+                        border: `3px solid ${yearlyResult.thirdSemesterNeededTestScore <= 100 ? '#FF9800' : '#E91E63'}`
                       }}>
                         <div style={{ 
-                          fontSize: '3rem', 
+                          fontSize: '2.5rem', 
                           fontWeight: 'bold',
-                          color: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#FF9800' : '#E91E63',
+                          color: yearlyResult.thirdSemesterNeededTestScore <= 100 ? '#FF9800' : '#E91E63',
                           marginBottom: '10px'
                         }}>
-                          {yearlyResult.thirdSemesterNeededGrade}
+                          {Math.round(yearlyResult.thirdSemesterNeededTestScore)}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>
-                          三学期必要評定
+                          三学期必要点数
                         </div>
                         <div style={{ fontSize: '0.9rem', color: '#888' }}>
-                          {yearlyResult.thirdSemesterNeededGrade <= 5 ? '達成可能' : '達成困難'}
+                          {yearlyResult.thirdSemesterNeededTestScore <= 100 ? '達成可能' : '達成困難'}
                         </div>
                       </div>
                     </div>
@@ -1069,24 +1058,24 @@ const GradeCalculator: React.FC = () => {
                         color: '#555',
                         marginBottom: '15px'
                       }}>
-                        <div>🎯 <strong>目標:</strong> 年間評定{currentSubject?.targetGrade} → 必要平均 {yearlyResult.targetYearlyAverage}点</div>
-                        <div>📈 <strong>一学期(40%):</strong> 評定{yearlyResult.firstSemesterGrade} → {Math.round(yearlyResult.firstSemesterAvg)}点</div>
-                        <div>📈 <strong>二学期(60%):</strong> 評定{yearlyResult.secondSemesterGrade} → {Math.round(yearlyResult.secondSemesterAvg)}点</div>
-                        <div>📊 <strong>現在の年間平均:</strong> {yearlyResult.yearlyAverage}点</div>
+                        <div>🎯 <strong>目標:</strong> 年間評定{currentSubject?.targetGrade} → 必要総評点 {yearlyResult.targetPoints}点</div>
+                        <div>📈 <strong>一学期:</strong> 評定{yearlyResult.firstSemesterGrade} → {yearlyResult.firstSemesterPoint}点</div>
+                        <div>📈 <strong>二学期:</strong> 評定{yearlyResult.secondSemesterGrade} → {yearlyResult.secondSemesterPoint}点</div>
+                        <div>📊 <strong>使用済み:</strong> {yearlyResult.usedPoints}点</div>
                         <div style={{ 
                           borderTop: '2px solid #ddd',
                           paddingTop: '10px',
                           fontSize: '1.1rem',
                           fontWeight: 'bold',
-                          color: yearlyResult.thirdSemesterNeededGrade <= 5 ? '#f57c00' : '#d32f2f'
+                          color: yearlyResult.thirdSemesterNeededTestScore <= 100 ? '#f57c00' : '#d32f2f'
                         }}>
-                          🎯 <strong>不足:</strong> {Math.round(yearlyResult.shortfall)}点 → 三学期評定{yearlyResult.thirdSemesterNeededGrade}が必要
+                          🎯 <strong>残り必要:</strong> {yearlyResult.remainingPoints}点 → テストで{Math.round(yearlyResult.thirdSemesterNeededTestScore)}点必要
                         </div>
                       </div>
                       <div style={{ fontSize: '1.1rem', color: yearlyResult.isAchieved ? '#2e7d32' : '#bf360c' }}>
                         {yearlyResult.isAchieved 
                           ? `素晴らしい！年間で評定${currentSubject?.targetGrade}を達成しています！`
-                          : `年間評定${currentSubject?.targetGrade}のためには、あと${yearlyResult.shortfall}点必要です！`
+                          : `年間評定${currentSubject?.targetGrade}のためには、三学期のテストで${Math.round(yearlyResult.thirdSemesterNeededTestScore)}点必要です！`
                         }
                       </div>
                       <div style={{ 
@@ -1109,10 +1098,10 @@ const GradeCalculator: React.FC = () => {
                         }}>
                           <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>� おすすめの戦略:</div>
                           <div>
-                            現在: 4テスト平均{yearlyResult.yearlyAverage}点 + 平常点{currentSubject.participationScore}点
+                            📝 学年末考査で{Math.round(yearlyResult.thirdSemesterNeededTestScore)}点取れば目標達成！
                           </div>
                           <div>
-                            次回: テスト{yearlyResult.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                            計算式: ({Math.round(yearlyResult.thirdSemesterNeededTestScore)} × 0.8 + {currentSubject.participationScore}) = {yearlyResult.thirdSemesterNeededPoint}点
                           </div>
                           <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
                             💡 平常点を{currentSubject.participationScore}点と仮定した場合
