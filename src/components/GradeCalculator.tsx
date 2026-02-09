@@ -347,7 +347,14 @@ const GradeCalculator: React.FC = () => {
     }
     
     // 3. 目標評定に必要な総評点を計算
-    const targetPoints = subject.targetGrade * 80; // 評定5なら400点、評定4なら320点など
+    let targetPointsPerSemester;
+    if (subject.targetGrade === 5) targetPointsPerSemester = 80;
+    else if (subject.targetGrade === 4) targetPointsPerSemester = 65;
+    else if (subject.targetGrade === 3) targetPointsPerSemester = 50;
+    else if (subject.targetGrade === 2) targetPointsPerSemester = 40;
+    else return null; // 評定1は計算不要（39点以下は自動的に評定1）
+    
+    const targetPoints = targetPointsPerSemester * 3; // 例：80点×3学期=240点
     
     // 4. 一学期と二学期の評点を目標から引く
     const usedPoints = firstSemesterPoint + secondSemesterPoint;
