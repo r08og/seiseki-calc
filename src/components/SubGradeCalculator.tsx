@@ -133,28 +133,22 @@ const SubGradeCalculator: React.FC = () => {
     // 4つのテストすべてを同じ重みで扱う
     const allTests = [...firstSemesterTests, ...secondSemesterTests];
     
-    // 技能科目は統一85点基準
-    const SKILL_GRADING = {
-      grade5: { min: 85 },
-      grade4: { min: 70 },
-      grade3: { min: 55 },
-      grade2: { min: 40 },
-      grade1: { min: 0 }
-    };
+    // 技能科目は統一85点基準（両方のコースで85点で評定5）
+    const courseType = 'regular'; // 技能科目は統一基準
     
     // 学期と同じ計算方式：重み付き平均を計算（テスト80% + 平常点20%）
     const yearlyAverage = calculateWeightedAverage(allTests, [], subject.participationScore);
-    const yearlyGrade = calculateGradeFromAverage(yearlyAverage, SKILL_GRADING);
+    const yearlyGrade = calculateGradeFromAverage(yearlyAverage, courseType);
     
     // 年間目標評定に必要な点数を計算
-    const targetAverage = getRequiredAverageForGrade(subject.targetGrade, SKILL_GRADING);
+    const targetAverage = getRequiredAverageForGrade(subject.targetGrade, courseType);
     const nextTestScore = calculateRequiredScoreForNextTest(
       allTests,
       subject.participationScore,
       subject.targetGrade,
       100,
       subject.participationScore,
-      SKILL_GRADING
+      courseType
     );
     
     // 各学期の平均も表示用に計算
