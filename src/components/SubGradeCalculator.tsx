@@ -130,40 +130,64 @@ const SubGradeCalculator: React.FC = () => {
       return null;
     }
     
-    // 4つのテストすべてを同じ重みで扱う
-    const allTests = [...firstSemesterTests, ...secondSemesterTests];
+    // 💡 正しい年間評定計算：評点から引く方式
+    // 1. 各学期のテスト平均を計算
+    const firstSemesterTestAvg = firstSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / firstSemesterTests.length;
+    const secondSemesterTestAvg = secondSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / secondSemesterTests.length;
     
-    // 技能科目は統一85点基準（両方のコースで85点で評定5）
-    const courseType = 'regular'; // 技能科目は統一基準
+    // 2. 各学期の評点を計算：テスト平均 × 0.8 + 平常点
+    const firstSemesterPoint = firstSemesterTestAvg * 0.8 + subject.participationScore;
+    const secondSemesterPoint = secondSemesterTestAvg * 0.8 + subject.participationScore;
     
-    // 学期と同じ計算方式：重み付き平均を計算（テスト80% + 平常点20%）
-    const yearlyAverage = calculateWeightedAverage(allTests, [], subject.participationScore);
-    const yearlyGrade = calculateGradeFromAverage(yearlyAverage, courseType);
+    // 各学期の評定も計算（表示用）
+    const firstSemesterResult = getResults(subject, '一学期');
+    const secondSemesterResult = getResults(subject, '二学期');
     
-    // 年間目標評定に必要な点数を計算
-    const targetAverage = getRequiredAverageForGrade(subject.targetGrade, courseType);
-    const nextTestScore = calculateRequiredScoreForNextTest(
-      allTests,
-      subject.participationScore,
-      subject.targetGrade,
-      100,
-      subject.participationScore,
-      courseType
-    );
+    if (!firstSemesterResult || !secondSemesterResult) {
+      return null;
+    }
     
-    // 各学期の平均も表示用に計算
-    const firstAvg = firstSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / firstSemesterTests.length;
-    const secondAvg = secondSemesterTests.reduce((sum, test) => sum + (test.score / test.maxScore * 100), 0) / secondSemesterTests.length;
+    // 3. 目標評定に必要な総評点を計算（技能教科は85点基準）
+    let targetPointsPerSemester;
+    if (subject.targetGrade === 5) targetPointsPerSemester = 85;
+    else if (subject.targetGrade === 4) targetPointsPerSemester = 70;
+    else if (subject.targetGrade === 3) targetPointsPerSemester = 55;
+    else if (subject.targetGrade === 2) targetPointsPerSemester = 40;
+    else return null; // 評定1は計算不要（39点以下は自動的に評定1）
+    
+    const targetPoints = targetPointsPerSemester * 3; // 例：85点×3学期=255点
+    
+    // 4. 一学期と二学期の評点を目標から引く
+    const usedPoints = firstSemesterPoint + secondSemesterPoint;
+    const remainingPoints = targetPoints - usedPoints;
+    
+    // 5. 三学期に必要な評点（テスト × 0.8 + 平常点）
+    const thirdSemesterNeededPoint = Math.max(0, remainingPoints);
+    
+    // 6. 三学期のテストで必要な点数を逆算
+    // 必要評点 = テスト点数 × 0.8 + 平常点
+    // テスト点数 = (必要評点 - 平常点) ÷ 0.8
+    const thirdSemesterNeededTestScore = Math.max(0, (thirdSemesterNeededPoint - subject.participationScore) / 0.8);
+    
+    // 7. 現在の年間評定を計算
+    const currentYearlyPoints = firstSemesterPoint + secondSemesterPoint;
+    const currentYearlyGrade = Math.floor(currentYearlyPoints / 85); // 255点なら3、340点なら4
     
     return {
-      firstSemesterAvg: Math.round(firstAvg * 10) / 10,
-      secondSemesterAvg: Math.round(secondAvg * 10) / 10,
-      yearlyAverage: Math.round(yearlyAverage * 10) / 10,
-      yearlyGrade,
-      targetAverage,
-      nextTestScore: Math.round(nextTestScore * 10) / 10,
-      isAchieved: yearlyGrade >= subject.targetGrade,
-      testCount: allTests.length
+      firstSemesterAvg: Math.round(firstSemesterTestAvg * 10) / 10,
+      secondSemesterAvg: Math.round(secondSemesterTestAvg * 10) / 10,
+      firstSemesterGrade: firstSemesterResult.currentGrade,
+      secondSemesterGrade: secondSemesterResult.currentGrade,
+      firstSemesterPoint: Math.round(firstSemesterPoint * 10) / 10,
+      secondSemesterPoint: Math.round(secondSemesterPoint * 10) / 10,
+      yearlyGrade: Math.max(1, Math.min(5, currentYearlyGrade)),
+      targetPoints: targetPoints,
+      usedPoints: Math.round(usedPoints * 10) / 10,
+      remainingPoints: Math.round(remainingPoints * 10) / 10,
+      thirdSemesterNeededPoint: Math.round(thirdSemesterNeededPoint * 10) / 10,
+      thirdSemesterNeededTestScore: Math.round(thirdSemesterNeededTestScore * 10) / 10,
+      isAchieved: remainingPoints <= 0,
+      testCount: firstSemesterTests.length + secondSemesterTests.length
     };
   };
 
@@ -803,7 +827,7 @@ const SubGradeCalculator: React.FC = () => {
                           {yearlyResult.yearlyGrade}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>年間評定</div>
-                        <div style={{ fontSize: '0.9rem', color: '#888' }}>平均: {yearlyResult.yearlyAverage}点</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>評点: {yearlyResult.usedPoints}点</div>
                       </div>
                       
                       {/* 目標評定 */}
@@ -818,7 +842,7 @@ const SubGradeCalculator: React.FC = () => {
                           {currentSubject?.targetGrade}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '5px' }}>目標評定</div>
-                        <div style={{ fontSize: '0.9rem', color: '#888' }}>必要: {yearlyResult.targetAverage}点</div>
+                        <div style={{ fontSize: '0.9rem', color: '#888' }}>必要: {yearlyResult.targetPoints}点</div>
                       </div>
                       
                       {/* 達成状況 */}
@@ -862,7 +886,7 @@ const SubGradeCalculator: React.FC = () => {
                       <div style={{ fontSize: '1.1rem', color: yearlyResult.isAchieved ? '#2e7d32' : '#bf360c' }}>
                         {yearlyResult.isAchieved 
                           ? `素晴らしい！年間で評定${currentSubject?.targetGrade}を達成しています！`
-                          : `年間評定${currentSubject?.targetGrade}のためには、次のテストで約${yearlyResult.nextTestScore}点以上必要です！`
+                          : `年間評定${currentSubject?.targetGrade}のためには、三学期のテストで${Math.round(yearlyResult.thirdSemesterNeededTestScore)}点必要です！`
                         }
                       </div>
                       <div style={{ 
@@ -885,10 +909,10 @@ const SubGradeCalculator: React.FC = () => {
                         }}>
                           <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>� おすすめの戦略:</div>
                           <div>
-                            現在: 4テスト平均{yearlyResult.yearlyAverage}点 + 平常点{currentSubject.participationScore}点
+                            📝 一学期評点: {yearlyResult.firstSemesterPoint}点 + 二学期評点: {yearlyResult.secondSemesterPoint}点
                           </div>
                           <div>
-                            次回: テスト{yearlyResult.nextTestScore}点 + 平常点{currentSubject.participationScore}点で目標達成！
+                            三学期: テスト{Math.round(yearlyResult.thirdSemesterNeededTestScore)}点 + 平常点{currentSubject.participationScore}点で目標達成！
                           </div>
                           <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
                             💡 平常点を{currentSubject.participationScore}点と仮定した場合
