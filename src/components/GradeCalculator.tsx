@@ -368,9 +368,22 @@ const GradeCalculator: React.FC = () => {
     // テスト点数 = (必要評点 - 平常点) ÷ 0.8
     const thirdSemesterNeededTestScore = Math.max(0, (thirdSemesterNeededPoint - subject.participationScore) / 0.8);
     
-    // 7. 現在の年間評定を計算
-    const currentYearlyPoints = firstSemesterPoint + secondSemesterPoint;
-    const currentYearlyGrade = Math.floor(currentYearlyPoints / 80); // 240点なら3、320点なら4
+    // 7. 現在の年間評定予測を計算（参考値）
+    // 現時点では正確な年間評定は計算できないが、
+    // 三学期で最低限必要な点数が取れるかどうかで予測
+    let predictedYearlyGrade;
+    
+    // 残り必要点数が合理的に達成可能かで判定
+    if (remainingPoints <= 0) {
+      // すでに目標達成
+      predictedYearlyGrade = subject.targetGrade;
+    } else if (thirdSemesterNeededTestScore <= 100) {
+      // 100点以下で達成可能
+      predictedYearlyGrade = subject.targetGrade;
+    } else {
+      // 100点超えが必要なので、1つ下の評定を予測
+      predictedYearlyGrade = Math.max(1, subject.targetGrade - 1);
+    }
     
     return {
       firstSemesterAvg: Math.round(firstSemesterTestAvg * 10) / 10,
@@ -379,7 +392,7 @@ const GradeCalculator: React.FC = () => {
       secondSemesterGrade: secondSemesterResult.currentGrade,
       firstSemesterPoint: Math.round(firstSemesterPoint * 10) / 10,
       secondSemesterPoint: Math.round(secondSemesterPoint * 10) / 10,
-      yearlyGrade: Math.max(1, Math.min(5, currentYearlyGrade)),
+      yearlyGrade: Math.max(1, Math.min(5, predictedYearlyGrade)),
       targetPoints: targetPoints,
       usedPoints: Math.round(usedPoints * 10) / 10,
       remainingPoints: Math.round(remainingPoints * 10) / 10,
