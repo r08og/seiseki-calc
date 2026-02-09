@@ -171,7 +171,12 @@ const SubGradeCalculator: React.FC = () => {
     
     // 7. 現在の年間評定を計算
     const currentYearlyPoints = firstSemesterPoint + secondSemesterPoint;
-    const currentYearlyGrade = Math.floor(currentYearlyPoints / 85); // 255点なら3、340点なら4
+    let currentYearlyGrade;
+    if (currentYearlyPoints >= 170) currentYearlyGrade = 5;        // 85×2=170点以上で評定5
+    else if (currentYearlyPoints >= 140) currentYearlyGrade = 4;   // 70×2=140点以上で評定4  
+    else if (currentYearlyPoints >= 110) currentYearlyGrade = 3;   // 55×2=110点以上で評定3
+    else if (currentYearlyPoints >= 80) currentYearlyGrade = 2;    // 40×2=80点以上で評定2
+    else currentYearlyGrade = 1;                                   // それ未満は評定1
     
     return {
       firstSemesterAvg: Math.round(firstSemesterTestAvg * 10) / 10,
